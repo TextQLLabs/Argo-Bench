@@ -9,8 +9,8 @@ forecasts, dashboard data sources), not on what it writes in its answer.
 
 This repository is the minimum needed to reproduce the paper's runs: the questions, the
 reference agent on [Inspect AI](https://inspect.aisi.org.uk), its two tool servers, the
-sandboxes `run_python` executes in, and the model configurations. The warehouse is
-distributed separately (see *Data*). The answer keys are held out (see *Submitting results*).
+sandboxes `run_python` executes in, and the model configurations. The warehouse is on
+Hugging Face, [textql/Argo-Bench](https://huggingface.co/datasets/textql/Argo-Bench) (see *Data*). The answer keys are held out (see *Submitting results*).
 
 ## How a run works
 
@@ -59,11 +59,13 @@ prompt says exactly what to file, and the `conformance` score must be 1.
 
 ## Data
 
-Download the warehouse release (see the paper's data statement) and load it into a local
-DuckDB file with the as-of month views:
+The warehouse is the Hugging Face dataset
+[textql/Argo-Bench](https://huggingface.co/datasets/textql/Argo-Bench) (Parquet, 71 GiB).
+Download it and load it into a local DuckDB file with the as-of month views:
 
 ```bash
-.venv/bin/python scripts/load_duckdb.py --kit path/to/release --out data/argo.duckdb
+hf download textql/Argo-Bench --repo-type dataset --local-dir data/argo-bench
+.venv/bin/python scripts/load_duckdb.py --kit data/argo-bench --out data/argo.duckdb
 ```
 
 The released warehouse is a sibling build (another random seed, same configuration) of
@@ -72,9 +74,10 @@ or promo-code ids, or counts drawn from the data) were re-drawn from the release
 each question's own selection rule; their cards say so in `prompt_edit`, and `version` still
 identifies the question as it was run.
 
-Or load it into BigQuery with the release's `setup/load_bigquery.sh` and
-`setup/month_views.sh` (the paper's runs used BigQuery), then set `ARGO_WAREHOUSE_*` in
-`.env`. Give the agent a read-only credential that can see only the benchmark's datasets.
+Or load it into BigQuery with the dataset's `setup/bigquery/load.sh` and
+`setup/bigquery/month_views.sh` (the paper's runs used BigQuery; the dataset card has the
+commands, and loaders for Snowflake, Databricks, Trino and Iceberg), then set
+`ARGO_WAREHOUSE_*` in `.env`. Give the agent a read-only credential that can see only the benchmark's datasets.
 
 ## Running
 
