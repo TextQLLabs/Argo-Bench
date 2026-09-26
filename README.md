@@ -66,6 +66,12 @@ DuckDB file with the as-of month views:
 .venv/bin/python scripts/load_duckdb.py --kit path/to/release --out data/argo.duckdb
 ```
 
+The released warehouse is a sibling build (another random seed, same configuration) of
+the one the paper's runs queried. Questions that name specific entities (courier, storefront
+or promo-code ids, or counts drawn from the data) were re-drawn from the released build by
+each question's own selection rule; their cards say so in `prompt_edit`, and `version` still
+identifies the question as it was run.
+
 Or load it into BigQuery with the release's `setup/load_bigquery.sh` and
 `setup/month_views.sh` (the paper's runs used BigQuery), then set `ARGO_WAREHOUSE_*` in
 `.env`. Give the agent a read-only credential that can see only the benchmark's datasets.
