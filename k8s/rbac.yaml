@@ -1,0 +1,35 @@
+# What the harness needs, and nothing more: create, watch, exec into and delete pods in the
+# sandbox namespace. Bind it to the identity `inspect eval` runs as (a user, or this
+# ServiceAccount when the harness itself runs in the cluster).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argo-runner
+  namespace: argo-sandbox
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: argo-runner
+  namespace: argo-sandbox
+rules:
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [create, get, list, watch, delete]
+  - apiGroups: [""]
+    resources: [pods/exec]
+    verbs: [create, get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: argo-runner
+  namespace: argo-sandbox
+subjects:
+  - kind: ServiceAccount
+    name: argo-runner
+    namespace: argo-sandbox
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: argo-runner

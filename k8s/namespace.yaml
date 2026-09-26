@@ -1,0 +1,8 @@
+# The namespace the sandbox pods run in. Nothing else runs here, so the NetworkPolicy and
+# the quota apply to sandboxes only.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: argo-sandbox
+  labels:
+    pod-security.kubernetes.io/enforce: restricted

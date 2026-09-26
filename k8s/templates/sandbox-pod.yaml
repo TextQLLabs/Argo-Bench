@@ -1,0 +1,44 @@
+# One run's run_python sandbox: the analysis image and nothing else. A template, not a
+# manifest to apply: argo_bench/servers/python.py fills $NAME, $NAMESPACE, $IMAGE, $CPU and
+# $MEMORY, creates the pod when the run's first cell arrives, and deletes it when the run
+# ends (or when a cell times out and the interpreter is replaced).
+#
+# The kernel is not the pod's command: the server starts it with
+# `kubectl exec -i $NAME -c kernel -- python3 -u /opt/sandbox/kernel.py` and speaks one JSON
+# line each way per cell over that exec's stdin/stdout. The console, the run_sql results and
+# the Mission Control journal travel in the same protocol; nothing is mounted.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: $NAME
+  namespace: $NAMESPACE
+  labels:
+    app.kubernetes.io/name: argo-sandbox
+spec:
+  runtimeClassName: gvisor
+  restartPolicy: Never
+  # No credentials of any kind reach the pod.
+  automountServiceAccountToken: false
+  enableServiceLinks: false
+  terminationGracePeriodSeconds: 0
+  # No resolver: with the deny-all NetworkPolicy there is nothing to resolve to anyway.
+  dnsPolicy: None
+  dnsConfig:
+    nameservers: ["127.0.0.1"]
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    seccompProfile: {type: RuntimeDefault}
+  containers:
+    - name: kernel
+      image: $IMAGE
+      imagePullPolicy: IfNotPresent
+      # PID 1 only reaps: an exec'd kernel that is killed must not stay a zombie.
+      command: ["python3", "-c", "import os, signal, time\nsignal.signal(signal.SIGTERM, lambda *_: os._exit(0))\nwhile True:\n    try:\n        os.wait()\n    except ChildProcessError:\n        time.sleep(5)\n"]
+      workingDir: /work
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities: {drop: [ALL]}
+      resources:
+        requests: {cpu: "$CPU", memory: $MEMORY, ephemeral-storage: 10Gi}
+        limits: {cpu: "$CPU", memory: $MEMORY, ephemeral-storage: 10Gi}

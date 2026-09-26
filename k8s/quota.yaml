@@ -1,0 +1,12 @@
+# A ceiling on how much of the cluster sandboxes can hold at once (one pod per run in
+# flight). Size it to your concurrency: `inspect eval --max-samples N` runs N pods.
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: sandbox-quota
+  namespace: argo-sandbox
+spec:
+  hard:
+    pods: "64"
+    limits.cpu: "64"
+    limits.memory: 256Gi

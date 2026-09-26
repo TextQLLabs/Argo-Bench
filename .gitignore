@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+.venv-*/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local configuration and credentials
+.env
+*.json.key
+
+# Data and run outputs
+data/
+logs/
+workdirs/
+submissions/
+*.duckdb
+*.duckdb.wal
+
+# OS / build marker
+.DS_Store
+.argo-bench-export

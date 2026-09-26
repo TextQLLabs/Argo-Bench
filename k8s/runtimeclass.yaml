@@ -1,0 +1,8 @@
+# gVisor between the agent's code and the node's kernel. GKE Sandbox node pools ship this
+# RuntimeClass already (name `gvisor`, handler `gvisor`); on a self-managed cluster install
+# runsc on the nodes and point the handler at it (containerd: `runsc`).
+apiVersion: node.k8s.io/v1
+kind: RuntimeClass
+metadata:
+  name: gvisor
+handler: runsc

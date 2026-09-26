@@ -1,0 +1,8 @@
+Argo-Bench
+Copyright 2026 TextQL, Inc.
+
+The code in this repository is licensed under the Apache License, Version 2.0 (LICENSE).
+
+The benchmark data -- the question cards under tasks/ and the released warehouse they are
+asked against -- is licensed under the Creative Commons Attribution 4.0 International license
+(CC BY 4.0, https://creativecommons.org/licenses/by/4.0/). See DATA_LICENSE.md.

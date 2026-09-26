@@ -1,0 +1,412 @@
+[
+ {
+  "key": "gpt-6-astra-low",
+  "model": "openai/gpt-6-astra",
+  "effort": "low",
+  "config": {
+   "reasoning_effort": "low"
+  },
+  "model_args": {},
+  "env": {}
+ },
+ {
+  "key": "gpt-6-astra-medium",
+  "model": "openai/gpt-6-astra",
+  "effort": "medium",
+  "config": {
+   "reasoning_effort": "medium"
+  },
+  "model_args": {},
+  "env": {}
+ },
+ {
+  "key": "gpt-6-astra-high",
+  "model": "openai/gpt-6-astra",
+  "effort": "high",
+  "config": {
+   "reasoning_effort": "high"
+  },
+  "model_args": {},
+  "env": {}
+ },
+ {
+  "key": "gpt-6-astra-xhigh",
+  "model": "openai/gpt-6-astra",
+  "effort": "xhigh",
+  "config": {
+   "reasoning_effort": "xhigh"
+  },
+  "model_args": {},
+  "env": {}
+ },
+ {
+  "key": "gpt-6-sol-low",
+  "model": "openai/gpt-6-sol",
+  "effort": "low",
+  "config": {
+   "reasoning_effort": "low"
+  },
+  "model_args": {},
+  "env": {}
+ },
+ {
+  "key": "gpt-6-sol-medium",
+  "model": "openai/gpt-6-sol",
+  "effort": "medium",
+  "config": {
+   "reasoning_effort": "medium"
+  },
+  "model_args": {},
+  "env": {}
+ },
+ {
+  "key": "gpt-6-sol-high",
+  "model": "openai/gpt-6-sol",
+  "effort": "high",
+  "config": {
+   "reasoning_effort": "high"
+  },
+  "model_args": {},
+  "env": {}
+ },
+ {
+  "key": "gpt-6-sol-xhigh",
+  "model": "openai/gpt-6-sol",
+  "effort": "xhigh",
+  "config": {
+   "reasoning_effort": "xhigh"
+  },
+  "model_args": {},
+  "env": {}
+ },
+ {
+  "key": "gpt-6-luna-low",
+  "model": "openai/gpt-6-luna",
+  "effort": "low",
+  "config": {
+   "reasoning_effort": "low"
+  },
+  "model_args": {},
+  "env": {}
+ },
+ {
+  "key": "gpt-6-luna-medium",
+  "model": "openai/gpt-6-luna",
+  "effort": "medium",
+  "config": {
+   "reasoning_effort": "medium"
+  },
+  "model_args": {},
+  "env": {}
+ },
+ {
+  "key": "gpt-6-luna-high",
+  "model": "openai/gpt-6-luna",
+  "effort": "high",
+  "config": {
+   "reasoning_effort": "high"
+  },
+  "model_args": {},
+  "env": {}
+ },
+ {
+  "key": "gpt-6-luna-xhigh",
+  "model": "openai/gpt-6-luna",
+  "effort": "xhigh",
+  "config": {
+   "reasoning_effort": "xhigh"
+  },
+  "model_args": {},
+  "env": {}
+ },
+ {
+  "key": "opus-5.5-low",
+  "model": "anthropic/claude-opus-5-5",
+  "effort": "low",
+  "config": {
+   "reasoning_effort": "low"
+  },
+  "model_args": {},
+  "env": {}
+ },
+ {
+  "key": "opus-5.5-medium",
+  "model": "anthropic/claude-opus-5-5",
+  "effort": "medium",
+  "config": {
+   "reasoning_effort": "medium"
+  },
+  "model_args": {},
+  "env": {}
+ },
+ {
+  "key": "opus-5.5-high",
+  "model": "anthropic/claude-opus-5-5",
+  "effort": "high",
+  "config": {
+   "reasoning_effort": "high"
+  },
+  "model_args": {},
+  "env": {}
+ },
+ {
+  "key": "opus-5.5-xhigh",
+  "model": "anthropic/claude-opus-5-5",
+  "effort": "xhigh",
+  "config": {
+   "reasoning_effort": "xhigh"
+  },
+  "model_args": {},
+  "env": {}
+ },
+ {
+  "key": "sonnet-5-low",
+  "model": "anthropic/claude-sonnet-5",
+  "effort": "low",
+  "config": {
+   "reasoning_effort": "low"
+  },
+  "model_args": {},
+  "env": {}
+ },
+ {
+  "key": "sonnet-5-medium",
+  "model": "anthropic/claude-sonnet-5",
+  "effort": "medium",
+  "config": {
+   "reasoning_effort": "medium"
+  },
+  "model_args": {},
+  "env": {}
+ },
+ {
+  "key": "sonnet-5-high",
+  "model": "anthropic/claude-sonnet-5",
+  "effort": "high",
+  "config": {
+   "reasoning_effort": "high"
+  },
+  "model_args": {},
+  "env": {}
+ },
+ {
+  "key": "sonnet-5-xhigh",
+  "model": "anthropic/claude-sonnet-5",
+  "effort": "xhigh",
+  "config": {
+   "reasoning_effort": "xhigh"
+  },
+  "model_args": {},
+  "env": {}
+ },
+ {
+  "key": "haiku-4.5",
+  "model": "anthropic/claude-haiku-4-5",
+  "effort": "standard",
+  "config": {},
+  "model_args": {},
+  "env": {}
+ },
+ {
+  "key": "gemini-3.8-flash-low",
+  "model": "google/vertex/gemini-3.8-flash",
+  "effort": "low",
+  "config": {
+   "reasoning_effort": "low"
+  },
+  "model_args": {},
+  "env": {
+   "GOOGLE_CLOUD_LOCATION": "global"
+  }
+ },
+ {
+  "key": "gemini-3.8-flash-medium",
+  "model": "google/vertex/gemini-3.8-flash",
+  "effort": "medium",
+  "config": {
+   "reasoning_effort": "medium"
+  },
+  "model_args": {},
+  "env": {
+   "GOOGLE_CLOUD_LOCATION": "global"
+  }
+ },
+ {
+  "key": "gemini-3.8-flash-high",
+  "model": "google/vertex/gemini-3.8-flash",
+  "effort": "high",
+  "config": {
+   "reasoning_effort": "high"
+  },
+  "model_args": {},
+  "env": {
+   "GOOGLE_CLOUD_LOCATION": "global"
+  }
+ },
+ {
+  "key": "muse-spark-1.3-low",
+  "model": "openai-api/meta/muse-spark-1.3",
+  "effort": "low",
+  "config": {
+   "reasoning_effort": "low"
+  },
+  "model_args": {
+   "strict_tools": false
+  },
+  "env": {
+   "META_BASE_URL": "https://api.meta.ai/v1"
+  }
+ },
+ {
+  "key": "muse-spark-1.3-medium",
+  "model": "openai-api/meta/muse-spark-1.3",
+  "effort": "medium",
+  "config": {
+   "reasoning_effort": "medium"
+  },
+  "model_args": {
+   "strict_tools": false
+  },
+  "env": {
+   "META_BASE_URL": "https://api.meta.ai/v1"
+  }
+ },
+ {
+  "key": "muse-spark-1.3-high",
+  "model": "openai-api/meta/muse-spark-1.3",
+  "effort": "high",
+  "config": {
+   "reasoning_effort": "high"
+  },
+  "model_args": {
+   "strict_tools": false
+  },
+  "env": {
+   "META_BASE_URL": "https://api.meta.ai/v1"
+  }
+ },
+ {
+  "key": "muse-spark-1.3-xhigh",
+  "model": "openai-api/meta/muse-spark-1.3",
+  "effort": "xhigh",
+  "config": {
+   "reasoning_effort": "xhigh"
+  },
+  "model_args": {
+   "strict_tools": false
+  },
+  "env": {
+   "META_BASE_URL": "https://api.meta.ai/v1"
+  }
+ },
+ {
+  "key": "kimi-k3-low",
+  "model": "fireworks/accounts/fireworks/models/kimi-k3",
+  "effort": "low",
+  "config": {
+   "reasoning_effort": "low"
+  },
+  "model_args": {},
+  "env": {}
+ },
+ {
+  "key": "kimi-k3-high",
+  "model": "fireworks/accounts/fireworks/models/kimi-k3",
+  "effort": "high",
+  "config": {
+   "reasoning_effort": "high"
+  },
+  "model_args": {},
+  "env": {}
+ },
+ {
+  "key": "kimi-k3-xhigh",
+  "model": "fireworks/accounts/fireworks/models/kimi-k3",
+  "effort": "xhigh",
+  "config": {
+   "reasoning_effort": "xhigh"
+  },
+  "model_args": {},
+  "env": {}
+ },
+ {
+  "key": "deepseek-v4.1-flash-low",
+  "model": "fireworks/accounts/fireworks/models/deepseek-v4p1-flash",
+  "effort": "low",
+  "config": {
+   "reasoning_effort": "low"
+  },
+  "model_args": {},
+  "env": {}
+ },
+ {
+  "key": "deepseek-v4.1-flash-high",
+  "model": "fireworks/accounts/fireworks/models/deepseek-v4p1-flash",
+  "effort": "high",
+  "config": {
+   "reasoning_effort": "high"
+  },
+  "model_args": {},
+  "env": {}
+ },
+ {
+  "key": "deepseek-v4.1-flash-xhigh",
+  "model": "fireworks/accounts/fireworks/models/deepseek-v4p1-flash",
+  "effort": "xhigh",
+  "config": {
+   "reasoning_effort": "xhigh"
+  },
+  "model_args": {},
+  "env": {}
+ },
+ {
+  "key": "glm-5.3-flash-high",
+  "model": "fireworks/accounts/fireworks/models/glm-5p3-flash",
+  "effort": "high",
+  "config": {
+   "reasoning_effort": "high"
+  },
+  "model_args": {},
+  "env": {}
+ },
+ {
+  "key": "glm-5.3-flash-xhigh",
+  "model": "fireworks/accounts/fireworks/models/glm-5p3-flash",
+  "effort": "xhigh",
+  "config": {
+   "reasoning_effort": "xhigh"
+  },
+  "model_args": {},
+  "env": {}
+ },
+ {
+  "key": "qwen-3.8-max-low",
+  "model": "fireworks/accounts/fireworks/models/qwen3p8-max",
+  "effort": "low",
+  "config": {
+   "reasoning_effort": "low"
+  },
+  "model_args": {},
+  "env": {}
+ },
+ {
+  "key": "qwen-3.8-max-medium",
+  "model": "fireworks/accounts/fireworks/models/qwen3p8-max",
+  "effort": "medium",
+  "config": {
+   "reasoning_effort": "medium"
+  },
+  "model_args": {},
+  "env": {}
+ },
+ {
+  "key": "qwen-3.8-max-high",
+  "model": "fireworks/accounts/fireworks/models/qwen3p8-max",
+  "effort": "high",
+  "config": {
+   "reasoning_effort": "high"
+  },
+  "model_args": {},
+  "env": {}
+ }
+]

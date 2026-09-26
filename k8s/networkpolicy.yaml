@@ -1,0 +1,12 @@
+# No packet in or out of any sandbox pod: no DNS, no egress to the internet, no reaching the
+# harness, the warehouse or the metadata server. `kubectl exec` goes through the API server
+# and the kubelet, not the pod network, so the harness still reaches the kernel.
+# (Needs a CNI that enforces NetworkPolicy, e.g. GKE Dataplane V2 or Calico.)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-all
+  namespace: argo-sandbox
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]

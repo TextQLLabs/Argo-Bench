@@ -1,0 +1,38 @@
+;; The local run_python kernel's filesystem boundary (macOS sandbox-exec / Seatbelt).
+;;
+;; Without it the kernel is an ordinary process on the host and can read anything the user
+;; can. The kernel may read only what it needs to run Python, and write only into its
+;; working directory and the temp directories.
+;;
+;; Parameters (sandbox-exec -D NAME=value), all real paths:
+;;   WORKDIR  the run's working directory (results/, mission_control.py)
+;;   VENV     the sandbox interpreter's venv (site-packages)
+;;   KERNEL   argo_bench/sandbox/kernel.py
+;;   CA_FILE  the CA bundle the kernel verifies TLS with, or /dev/null
+;;
+;; Seatbelt applies the LAST matching rule, so each allow below narrows the deny above it.
+(version 1)
+(allow default)
+
+;; No file contents from any home directory or mounted volume: this repository, other
+;; runs' working directories, credentials. Metadata stays readable so path resolution
+;; works; reading a file or listing a directory does not.
+(deny file-read-data (subpath "/Users") (subpath "/Volumes") (subpath "/private/var/root"))
+(allow file-read-data
+    (subpath (param "WORKDIR"))
+    (subpath (param "VENV"))
+    (literal (param "KERNEL"))
+    (literal (param "CA_FILE")))
+
+;; Writes only where a notebook legitimately writes.
+(deny file-write*)
+(allow file-write*
+    (subpath (param "WORKDIR"))
+    (subpath "/private/tmp")
+    (subpath "/private/var/folders")
+    (subpath "/dev"))
+
+;; ...except the console the harness installed, which is not the agent's to edit.
+(deny file-write*
+    (literal (string-append (param "WORKDIR") "/mission_control.py"))
+    (literal (string-append (param "WORKDIR") "/mission_control_plumbing.py")))
