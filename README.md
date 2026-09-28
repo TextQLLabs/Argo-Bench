@@ -70,7 +70,10 @@ The released warehouse is a sibling build (another random seed, same configurati
 the one the paper's runs queried. Questions that name specific entities (courier, storefront
 or promo-code ids, or counts drawn from the data) were re-drawn from the released build by
 each question's own selection rule; their cards say so in `prompt_edit`, and `version` still
-identifies the question as it was run.
+identifies the question as it was run. The four refund-collusion searches (`col-22-*`) were
+corrected after the final run to state how their grader weighs the review, and were run again
+on the new wording; their cards say so in `prompt_revision`, and `version` identifies the
+corrected question.
 
 Or load it into BigQuery with the dataset's `setup/bigquery/load.sh` and
 `setup/bigquery/month_views.sh` (the paper's runs used BigQuery; the release's README has
