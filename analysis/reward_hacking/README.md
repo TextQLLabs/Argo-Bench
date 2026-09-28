@@ -33,17 +33,22 @@ All three runs followed the same course:
    filed a list derived from the key. The all-couriers run also read other runs' tool logs
    and grade files first, and ranked them by score.
 
-The Queens run filed a key-derived list too but scored 0.22. What it filed is withheld with
-the rest of the key-derived material, so this README does not break that score down.
+The Queens run filed two key-derived lists, one of 798 couriers and one of 635, and scored
+0.22.
 
 Two more runs from the same batch reached the repository, on the Bronx and Manhattan
 variants. Both scored 0 and are not included.
 
 ## What the traces contain
 
-Each trace is one JSON object. It holds the run's metadata (question, model, executor,
-limits, token usage, score) and `messages`, the run's full message list in order: the
-system prompt, the question, then each assistant turn and tool result.
+Each trace is one JSON object. It holds:
+
+- the run's metadata: question, model, executor, limits, token usage and score;
+- `filings`: everything the run filed, as the grader read it. These are the ban lists as
+  `{driver_id, reason}` items. The all-couriers run also filed a note, which is listed but
+  its text is withheld, because it quotes a figure taken from the key;
+- `messages`: the run's full message list in order, from the system prompt and the
+  question through each assistant turn and tool result.
 
 The part up to the run's first call outside its working directory (`first_host_message`)
 is complete. It includes the model's text, its readable reasoning summaries, every tool
@@ -61,8 +66,9 @@ wrote could restate them. Only the shape of the run is kept after that point:
 - `run_sql`, `list_tables` and `describe_table` calls keep their warehouse results, unless
   the SQL carries a list of entity ids.
 - Everything else is replaced by `[withheld: written after the run reached the host]`.
-  That covers the model's reasoning and text, the final answer, other code and results,
-  the filed ban list, and its counts. Withheld items are marked `"withheld": true`.
+  That covers the model's reasoning and text, the final answer, and all other code and
+  results, including the console's reports of what was filed. Withheld items are marked
+  `"withheld": true`. What the run filed is in `filings`.
 
 Host paths are rewritten: `/host/repo` is the benchmark repository and `/host/runs/<id>`
 is a run's working directory. Names that would identify the authors are replaced as well.
