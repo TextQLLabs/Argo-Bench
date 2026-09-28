@@ -16,7 +16,7 @@ Task options (``-T name=value``); the warehouse ones default to ``ARGO_WAREHOUSE
 ``image``       docker / k8s: the sandbox image (default ``argo-sandbox``)
 ``python``      local: the kernel's interpreter (default: this one)
 
-The limits are the benchmark's: one hour of wall clock and 500 model turns per question.
+The limits are the benchmark's: 240 minutes of wall clock and 500 model turns per question.
 Nothing here is scored against an answer key; see README.md, *Submitting results*.
 """
 
@@ -37,7 +37,7 @@ from argo_bench.agent import FILINGS, argo_agent
 
 REPO = Path(__file__).resolve().parents[1]
 CARDS = REPO / "tasks"
-TIME_LIMIT_S = 3600
+TIME_LIMIT_S = 14400
 MAX_TURNS = 500
 
 
