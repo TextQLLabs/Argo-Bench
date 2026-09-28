@@ -308,7 +308,7 @@ def main(argv: list[str] | None = None) -> int:
                     help="local: confine the kernel with sandbox-exec (macOS)")
     ap.add_argument("--image", default="argo-sandbox", help="docker/k8s: the sandbox image")
     ap.add_argument("--cpus", default="1", help="docker/k8s: CPU limit")
-    ap.add_argument("--memory", default="4Gi", help="docker/k8s: memory limit")
+    ap.add_argument("--memory", default="8Gi", help="docker/k8s: memory limit")
     ap.add_argument("--k8s-namespace", default="argo-sandbox")
     ap.add_argument("--k8s-pod-template", default=str(POD_TEMPLATE))
     ap.add_argument("--env", action="append", default=[], metavar="KEY=VALUE",

@@ -121,7 +121,7 @@ Task options (`-T`): `questions` (`final`, `smoke`, a JSONL path, or comma-separ
   read only its working directory, its venv and the kernel. On Linux it is not confined;
   use Docker.
 - **`docker`**: `docker build -t argo-sandbox argo_bench/sandbox`, then `-T sandbox=docker`.
-  One container per run, `--network none`, 1 CPU and 4 GiB.
+  One container per run, `--network none`, 1 CPU and 8 GiB.
 - **`k8s`**: one pod per run, reached with `kubectl exec`. Apply `k8s/` once
   (`kubectl apply -f k8s/`) for the namespace, the gVisor RuntimeClass,
   a deny-all NetworkPolicy, a quota and the runner's RBAC. Then push the image somewhere the

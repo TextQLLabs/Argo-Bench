@@ -9,4 +9,4 @@ spec:
   hard:
     pods: "64"
     limits.cpu: "64"
-    limits.memory: 256Gi
+    limits.memory: 512Gi
