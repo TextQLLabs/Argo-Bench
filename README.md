@@ -161,6 +161,8 @@ rungs.json                 the model rungs of the paper
 k8s/                       the sandbox namespace, RuntimeClass, NetworkPolicy, quota, RBAC;
                            k8s/templates/, the per-run pod
 scripts/                   run.py, load_duckdb.py, export_submission.py
+analysis/spider2/          the appendix's Spider 2.0 measurements (spider2_shape.py and its
+                           output); analysis/spider2/README.md says how to rerun it
 ```
 
 ## License
