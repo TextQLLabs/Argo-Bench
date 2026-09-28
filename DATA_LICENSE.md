@@ -13,6 +13,6 @@ simulation is calibrated to.
 
 You may share and adapt the data for any purpose, including commercially, provided you
 give appropriate credit, link to the license, and indicate if changes were made.
-Suggested attribution: *Argo-Bench (TextQL, 2026), CC BY 4.0.*
+Suggested attribution: *Argo-Bench (2026), CC BY 4.0.*
 
 The code in this repository is licensed separately, under Apache-2.0 (`LICENSE`).

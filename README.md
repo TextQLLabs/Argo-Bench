@@ -10,7 +10,7 @@ forecasts, dashboard data sources), not on what it writes in its answer.
 This repository is the minimum needed to reproduce the paper's runs: the questions, the
 reference agent on [Inspect AI](https://inspect.aisi.org.uk), its two tool servers, the
 sandboxes `run_python` executes in, and the model configurations. The warehouse is on
-Hugging Face, [textql/Argo-Bench](https://huggingface.co/datasets/textql/Argo-Bench) (see *Data*). The answer keys are held out (see *Submitting results*).
+Hugging Face, [DoubleBlindAnon912/iclr-double-blind-dataset](https://huggingface.co/datasets/DoubleBlindAnon912/iclr-double-blind-dataset) (see *Data*). The answer keys are held out (see *Submitting results*).
 
 ## How a run works
 
@@ -60,11 +60,11 @@ prompt says exactly what to file, and the `conformance` score must be 1.
 ## Data
 
 The warehouse is the Hugging Face dataset
-[textql/Argo-Bench](https://huggingface.co/datasets/textql/Argo-Bench) (Parquet, 71 GiB).
+[DoubleBlindAnon912/iclr-double-blind-dataset](https://huggingface.co/datasets/DoubleBlindAnon912/iclr-double-blind-dataset) (Parquet, 71 GiB).
 Download it and load it into a local DuckDB file with the as-of month views:
 
 ```bash
-hf download textql/Argo-Bench --repo-type dataset --local-dir data/argo-bench
+hf download DoubleBlindAnon912/iclr-double-blind-dataset --repo-type dataset --local-dir data/argo-bench
 .venv/bin/python scripts/load_duckdb.py --kit data/argo-bench --out data/argo.duckdb
 ```
 

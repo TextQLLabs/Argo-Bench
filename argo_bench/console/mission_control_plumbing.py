@@ -180,7 +180,7 @@ def get_sandbox_id() -> str | None:
 
     1. ``MISSION_CONTROL_SANDBOX_ID`` — an explicit override always wins.
     2. ``__get_sandbox_id()`` — the runtime's own accessor. This is the normal path.
-    3. ``SANDBOX_ID`` / ``TQL_SANDBOX_ID`` — an environment variable, if one is set.
+    3. ``SANDBOX_ID`` — an environment variable, if one is set.
     4. ``WEB_URL`` / ``WORKER_NAME`` — org and chat ids parsed out of a session URL.
 
     Returns None only when a runtime exposes none of these, which is not an error:
@@ -194,7 +194,7 @@ def get_sandbox_id() -> str | None:
     if from_runtime:
         return from_runtime
 
-    for var in ("SANDBOX_ID", "TQL_SANDBOX_ID"):
+    for var in ("SANDBOX_ID",):
         value = os.environ.get(var, "").strip()
         if value:
             return value
