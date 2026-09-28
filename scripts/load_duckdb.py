@@ -3,7 +3,7 @@
 
     python scripts/load_duckdb.py --kit path/to/argo-bench --out data/argo.duckdb
 
-``--kit`` is a copy of the data release: the Hugging Face dataset (``data/<TABLE>/*.parquet``
+``--kit`` is a copy of the data release: the published dataset (``data/<TABLE>/*.parquet``
 and ``setup/duckdb/month_views.sql``) or the release kit (``warehouse/<TABLE>.parquet``
 and ``setup/month_views/ducklake.sql``). The tables land in schema ``food_delivery`` and
 the eleven as-of months beside it as ``food_delivery_1`` .. ``food_delivery_11``

@@ -9,8 +9,8 @@ forecasts, dashboard data sources), not on what it writes in its answer.
 
 This repository is the minimum needed to reproduce the paper's runs: the questions, the
 reference agent on [Inspect AI](https://inspect.aisi.org.uk), its two tool servers, the
-sandboxes `run_python` executes in, and the model configurations. The warehouse is on
-Hugging Face, [DoubleBlindAnon912/iclr-double-blind-dataset](https://huggingface.co/datasets/DoubleBlindAnon912/iclr-double-blind-dataset) (see *Data*). The answer keys are held out (see *Submitting results*).
+sandboxes `run_python` executes in, and the model configurations. The warehouse is released
+separately (see *Data*). The answer keys are held out (see *Submitting results*).
 
 ## How a run works
 
@@ -59,12 +59,10 @@ prompt says exactly what to file, and the `conformance` score must be 1.
 
 ## Data
 
-The warehouse is the Hugging Face dataset
-[DoubleBlindAnon912/iclr-double-blind-dataset](https://huggingface.co/datasets/DoubleBlindAnon912/iclr-double-blind-dataset) (Parquet, 71 GiB).
-Download it and load it into a local DuckDB file with the as-of month views:
+The warehouse is released separately as Parquet (71 GiB); the paper says where. Download
+it to `data/argo-bench` and load it into a local DuckDB file with the as-of month views:
 
 ```bash
-hf download DoubleBlindAnon912/iclr-double-blind-dataset --repo-type dataset --local-dir data/argo-bench
 .venv/bin/python scripts/load_duckdb.py --kit data/argo-bench --out data/argo.duckdb
 ```
 
@@ -75,8 +73,8 @@ each question's own selection rule; their cards say so in `prompt_edit`, and `ve
 identifies the question as it was run.
 
 Or load it into BigQuery with the dataset's `setup/bigquery/load.sh` and
-`setup/bigquery/month_views.sh` (the paper's runs used BigQuery; the dataset card has the
-commands, and loaders for Snowflake, Databricks, Trino and Iceberg), then set
+`setup/bigquery/month_views.sh` (the paper's runs used BigQuery; the release's README has
+the commands, and loaders for Snowflake, Databricks, Trino and Iceberg), then set
 `ARGO_WAREHOUSE_*` in `.env`. Give the agent a read-only credential that can see only the benchmark's datasets.
 
 ## Running
