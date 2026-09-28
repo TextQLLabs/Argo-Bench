@@ -161,6 +161,7 @@ k8s/                       the sandbox namespace, RuntimeClass, NetworkPolicy, q
 scripts/                   run.py, load_duckdb.py, export_submission.py
 analysis/spider2/          the appendix's Spider 2.0 measurements (spider2_shape.py and its
                            output); analysis/spider2/README.md says how to rerun it
+analysis/reward_hacking/   three development runs that read the grader, as scrubbed traces
 ```
 
 ## License
