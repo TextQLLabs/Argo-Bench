@@ -27,8 +27,9 @@ gets, with no model. What it files is kept in the sample's store like any run's,
     --model mockllm/model                                  # no data needed
 ```
 
-`-T engine=bigquery` (with `database`, `credentials`) replays them on BigQuery; every
-statement stays under the 20 GiB scan cap of the paper's runs.
+`-T engine=bigquery` (with `database`, `credentials`) replays them on BigQuery. Every
+statement stays under the 20 GiB per-query scan cap except three of ds-22's, which read the
+whole year's books: replay that one on DuckDB.
 
 ## The solutions
 
