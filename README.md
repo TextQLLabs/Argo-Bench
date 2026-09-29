@@ -97,9 +97,9 @@ the commands, and loaders for Snowflake, Databricks, Trino and Iceberg), then se
 .venv/bin/inspect view --log-dir logs
 ```
 
-Task options (`-T`): `questions` (`final`, `smoke`, a JSONL path, or comma-separated ids),
-`engine`, `database`, `schema`, `credentials`, `sandbox`, `image`, `python`,
-`keep_workdirs`. See `argo_bench/task.py`.
+Task options (`-T`): `questions` (`final`, `smoke`, `reference`, a JSONL path, or
+comma-separated ids), `solver` (`agent` or `reference`), `engine`, `database`, `schema`,
+`credentials`, `sandbox`, `image`, `python`, `keep_workdirs`. See `argo_bench/task.py`.
 
 ### Settings of the paper's runs
 
@@ -133,6 +133,25 @@ Neither container shares a filesystem with the host. The console, the `run_sql` 
 results and the Mission Control journal travel inside the kernel's own stdin/stdout protocol
 (`SyncedKernel` in `argo_bench/servers/python.py`).
 
+## Reference solutions
+
+`reference/` holds reference solutions for 20 of the questions: the four that the paper and
+its website walk through (`col-10-refund-partnerships`, `ds-22-margin-monthly-per-order`,
+`fc-12-true-ups-may`, `mer-71-silent-takeovers`) and sixteen more. Each one is the sequence of
+tool calls an agent would make, with a docstring that says what the question leaves out and
+the rule the solution files. `-T solver=reference` replays a question's reference through the
+same two servers a model gets, with no model, and keeps what it files like any run:
+
+```bash
+.venv/bin/inspect eval argo_bench/task.py -T solver=reference \
+    -T questions=ds-22-margin-monthly-per-order --model mockllm/model
+.venv/bin/inspect eval argo_bench/task.py -T solver=reference -T questions=reference \
+    --model mockllm/model                          # every question that has one
+```
+
+Every statement is written for both engines. `reference/README.md` lists the solutions and
+their scores on the paper's warehouse and on the released one.
+
 ## Submitting results
 
 The answer keys are held out, so the benchmark cannot be trained on. The only score computed
@@ -156,8 +175,10 @@ argo_bench/servers/        the warehouse and python MCP servers
 argo_bench/warehouse.py    read-only DuckDB / BigQuery access and month confinement
 argo_bench/sandbox/        the kernel, the Docker image, the macOS Seatbelt profile
 argo_bench/console/        Mission Control, the API the agent files through
+argo_bench/reference.py    the reference solver: replays a reference/ solution, no model
 argo_bench/system_prompt.md
 tasks/final.jsonl          the 210 questions; tasks/smoke.jsonl, the conformance check
+reference/                 reference solutions for 20 questions (and the smoke check)
 rungs.json                 the model rungs of the paper
 k8s/                       the sandbox namespace, RuntimeClass, NetworkPolicy, quota, RBAC;
                            k8s/templates/, the per-run pod

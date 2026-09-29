@@ -81,33 +81,47 @@ def question_view(card: dict, engine: str, schema: str) -> tuple[str, str]:
     return dataset_for(schema, cutoff), system_prompt(engine, cutoff)
 
 
+def open_run(state: TaskState, engine: str, database: str, schema: str, credentials: str,
+             sandbox: str, image: str, python: str, workdir_root: str) -> tuple[Path, list]:
+    """One run's working directory and the tools of its own two servers. The system prompt
+    goes first in the conversation."""
+    card = state.metadata
+    dataset, system = question_view(card, engine, schema)
+    name = re.sub(r"[^a-z0-9-]+", "-", f"argo-{state.sample_id}".lower())[:40].strip("-")
+    run_id = f"{name}-{uuid.uuid4().hex[:6]}"
+    workdir = prepare_workdir(workdir_root, name, card.get("contracts"))
+    path = {"PYTHONPATH": str(PACKAGE.parent)}
+    warehouse = mcp_server_stdio(
+        name="warehouse", command=sys.executable, cwd=workdir,
+        args=["-m", "argo_bench.servers.warehouse", "--engine", engine,
+              "--database", database, "--schema", dataset,
+              "--credentials", credentials, "--results-dir", str(workdir / "results")],
+        env={**forwarded(WAREHOUSE_ENV), **path})
+    interpreter = mcp_server_stdio(
+        name="python", command=sys.executable, cwd=workdir,
+        args=["-m", "argo_bench.servers.python", "--cwd", str(workdir),
+              "--backend", sandbox, "--name", run_id, "--image", image,
+              *(["--python", python] if python else []),
+              "--env", "MISSION_CONTROL_TARGET=", "--env",
+              f"MISSION_CONTROL_SANDBOX_ID={run_id}"],
+        env={**forwarded(PYTHON_ENV), **path})
+    state.messages.insert(0, ChatMessageSystem(content=system))
+    return workdir, [mcp_tools(warehouse), mcp_tools(interpreter)]
+
+
+def close_run(state: TaskState, workdir: Path, keep_workdirs: bool) -> None:
+    state.store.set(FILINGS, read_journal(workdir))
+    if not keep_workdirs:
+        shutil.rmtree(workdir, ignore_errors=True)
+
+
 @solver
 def argo_agent(engine: str, database: str, schema: str, credentials: str = "",
                sandbox: str = "local", image: str = "argo-sandbox", python: str = "",
                max_turns: int = 500, workdir_root: str = "", keep_workdirs: bool = False):
     async def solve(state: TaskState, generate: Generate) -> TaskState:
-        card = state.metadata
-        dataset, system = question_view(card, engine, schema)
-        name = re.sub(r"[^a-z0-9-]+", "-", f"argo-{state.sample_id}".lower())[:40].strip("-")
-        run_id = f"{name}-{uuid.uuid4().hex[:6]}"
-        workdir = prepare_workdir(workdir_root, name, card.get("contracts"))
-        path = {"PYTHONPATH": str(PACKAGE.parent)}
-        warehouse = mcp_server_stdio(
-            name="warehouse", command=sys.executable, cwd=workdir,
-            args=["-m", "argo_bench.servers.warehouse", "--engine", engine,
-                  "--database", database, "--schema", dataset,
-                  "--credentials", credentials, "--results-dir", str(workdir / "results")],
-            env={**forwarded(WAREHOUSE_ENV), **path})
-        interpreter = mcp_server_stdio(
-            name="python", command=sys.executable, cwd=workdir,
-            args=["-m", "argo_bench.servers.python", "--cwd", str(workdir),
-                  "--backend", sandbox, "--name", run_id, "--image", image,
-                  *(["--python", python] if python else []),
-                  "--env", "MISSION_CONTROL_TARGET=", "--env",
-                  f"MISSION_CONTROL_SANDBOX_ID={run_id}"],
-            env={**forwarded(PYTHON_ENV), **path})
-        tools = [mcp_tools(warehouse), mcp_tools(interpreter)]
-        state.messages.insert(0, ChatMessageSystem(content=system))
+        workdir, tools = open_run(state, engine, database, schema, credentials, sandbox,
+                                  image, python, workdir_root)
         try:
             async with mcp_connection(tools):
                 for _ in range(max_turns):
@@ -118,9 +132,7 @@ def argo_agent(engine: str, database: str, schema: str, credentials: str = "",
                     result = await execute_tools(state.messages, tools)
                     state.messages.extend(result.messages)
         finally:
-            state.store.set(FILINGS, read_journal(workdir))
-            if not keep_workdirs:
-                shutil.rmtree(workdir, ignore_errors=True)
+            close_run(state, workdir, keep_workdirs)
         return state
 
     return solve

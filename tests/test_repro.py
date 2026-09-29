@@ -133,3 +133,40 @@ def test_synced_kernel_timeout_replaces_the_container(tmp_path):
         assert kernel.name == "t-2"
     finally:
         kernel.close()
+
+
+def test_reference_modules():
+    """Every reference solution names a question, and each of its calls is well formed on
+    both engines: a known tool, a single read-only statement, Python that compiles."""
+    from argo_bench import reference
+    from argo_bench.warehouse import BigQueryWarehouse, DuckDBWarehouse
+
+    cards = {c["id"]: c for c in load_cards("final") + load_cards("smoke")}
+    questions = reference.available()
+    assert len(questions) >= 20 and "smoke-01-console" in questions
+    lexicons = {"bigquery": BigQueryWarehouse.lexicon, "duckdb": DuckDBWarehouse.lexicon}
+    for question in questions:
+        module = reference.load(question)
+        assert reference.module_path(module.QUESTION).is_file(), question
+        assert module.__doc__ and "Score:" in module.__doc__, question
+        for engine, lexicon in lexicons.items():
+            steps = reference.steps(module, cards[question]["prompt"], engine)
+            assert steps and steps[-1][0] == "run_python", question
+            for tool, arguments in steps:
+                if tool == "run_sql":
+                    read_only_statement(arguments["sql"], lexicon)
+                elif tool == "run_python":
+                    compile(arguments["code"], f"{question} (run_python)", "exec")
+
+
+def test_reference_replays_the_smoke_question(tmp_path):
+    """The reference solver end to end, through both MCP servers, with no model and no data."""
+    from inspect_ai import eval as inspect_eval
+
+    from argo_bench.task import argo_bench
+
+    log = inspect_eval(argo_bench(questions="smoke", solver="reference"), model="mockllm/model",
+                       log_dir=str(tmp_path), display="none")[0]
+    assert log.status == "success"
+    scores = {s.name: s.metrics["mean"].value for s in log.results.scores}
+    assert scores == {"filed": 1.0, "conformance": 1.0}

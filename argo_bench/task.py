@@ -7,7 +7,10 @@
 Task options (``-T name=value``); the warehouse ones default to ``ARGO_WAREHOUSE_*``:
 
 ``questions``   ``final`` (the 210 questions, tasks/final.jsonl), ``smoke`` (a no-data check of
-                the whole path), a path to a JSONL of cards, or comma-separated question ids
+                the whole path), ``reference`` (the questions with a reference solution), a
+                path to a JSONL of cards, or comma-separated question ids
+``solver``      ``agent`` (default: the model runs the question) or ``reference`` (the
+                question's reference solution is replayed, no model; see reference/)
 ``engine``      ``duckdb`` (default) or ``bigquery``
 ``database``    the DuckDB file (default ``data/argo.duckdb``) or the BigQuery project
 ``schema``      the base schema / dataset (default ``food_delivery``)
@@ -34,6 +37,7 @@ from inspect_ai.scorer import Score, Target, mean, scorer
 from inspect_ai.solver import TaskState
 
 from argo_bench.agent import FILINGS, argo_agent
+from argo_bench import reference
 
 REPO = Path(__file__).resolve().parents[1]
 CARDS = REPO / "tasks"
@@ -48,6 +52,8 @@ def load_cards(questions: str) -> list[dict]:
 
     if questions in ("final", "smoke"):
         return read(CARDS / f"{questions}.jsonl")
+    if questions == "reference":
+        questions = ",".join(reference.available())
     if questions.endswith(".jsonl"):
         return read(Path(questions))
     wanted = [q.strip() for q in questions.split(",") if q.strip()]
@@ -124,8 +130,15 @@ def argo_bench(questions: str = "final",
                sandbox: str = os.environ.get("ARGO_SANDBOX", "local"),
                image: str = os.environ.get("ARGO_SANDBOX_IMAGE", "argo-sandbox"),
                python: str = os.environ.get("ARGO_SANDBOX_PYTHON", ""),
-               workdir_root: str = "", keep_workdirs: bool = False) -> Task:
+               solver: str = "agent", workdir_root: str = "", keep_workdirs: bool = False) -> Task:
+    if solver not in ("agent", "reference"):
+        raise ValueError(f"solver must be agent or reference, not {solver!r}")
     cards = load_cards(str(questions))
+    if solver == "reference":
+        missing = sorted(set(c["id"] for c in cards) - set(reference.available()))
+        if missing:
+            raise ValueError(f"no reference solution for: {', '.join(missing)} "
+                             f"(-T questions=reference runs every one there is)")
     smoke_only = all(c["id"].startswith("smoke-") for c in cards)
     if engine == "duckdb":
         if smoke_only and not Path(database).is_file():
@@ -136,12 +149,13 @@ def argo_bench(questions: str = "final",
     dataset = [Sample(id=c["id"], input=c["prompt"],
                       metadata={k: v for k, v in c.items() if k not in ("id", "prompt")})
                for c in cards]
+    run = dict(engine=engine, database=database, schema=schema, credentials=credentials,
+               sandbox=sandbox, image=image, python=python, workdir_root=workdir_root,
+               keep_workdirs=keep_workdirs)
     return Task(
         dataset=dataset,
-        solver=argo_agent(engine=engine, database=database, schema=schema,
-                          credentials=credentials, sandbox=sandbox, image=image, python=python,
-                          max_turns=MAX_TURNS, workdir_root=workdir_root,
-                          keep_workdirs=keep_workdirs),
+        solver=(reference.reference_solver(**run) if solver == "reference"
+                else argo_agent(**run, max_turns=MAX_TURNS)),
         scorer=[filed(), conformance()] if smoke_only else filed(),
         time_limit=TIME_LIMIT_S,
         name="argo-bench",
