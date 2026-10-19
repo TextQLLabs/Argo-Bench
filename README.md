@@ -10,7 +10,7 @@ forecasts, dashboard data sources), not on what it writes in its answer.
 This repository is the minimum needed to reproduce the paper's runs: the questions, the
 reference agent on [Inspect AI](https://inspect.aisi.org.uk), its two tool servers, the
 sandboxes `run_python` executes in, and the model configurations. The warehouse is released
-separately (see *Data*). The answer keys are held out (see *Submitting results*).
+separately (see *Data*). The answer keys are held out (see *Scoring*).
 
 ## How a run works
 
@@ -152,19 +152,42 @@ same two servers a model gets, with no model, and keeps what it files like any r
 Every statement is written for both engines. `reference/README.md` lists the solutions and
 their scores on the paper's warehouse and on the released one.
 
-## Submitting results
+## Scoring
 
-The answer keys are held out, so the benchmark cannot be trained on. The only score computed
-here is `filed`, the share of runs that filed anything; the smoke question also reports
-`conformance`. To have runs scored:
+The answer keys are held out, so the benchmark cannot be trained on. Runs are scored by the
+Argo-Bench grading service, which holds the keys and runs the benchmark's grader: send it a
+run's filings with an API key (from the Argo-Bench team) and it returns the question's reward.
+
+```bash
+export ARGO_GRADER_KEY=argo_...
+
+# scored as each question ends (-T grading=auto, the default, uses the service when the key is set)
+.venv/bin/inspect eval argo_bench/task.py --model anthropic/claude-opus-5-5 --reasoning-effort high
+
+# a finished log (run without a key): add the scores to it
+.venv/bin/inspect score logs/<log>.eval --scorer argo_bench/remote.py@remote_grade \
+    --action append --overwrite
+
+# many logs at once: one row per run in grades.csv, and the mean per model
+.venv/bin/python scripts/grade_remote.py --log-dir logs --out grades.csv
+```
+
+Only the reward comes back; the per-metric detail would name answer-key entities. Busy or
+rate-limited answers are retried; a refusal (a missing, revoked or invalid key, a question
+version the service does not grade) shows as a scoring error rather than a score of 0.
+Without a key the only score computed here is `filed`, the share of runs that filed
+anything; the smoke question also reports `conformance`.
+
+To have runs scored by the maintainers instead, package them and send the file (and,
+optionally, the Inspect logs):
 
 ```bash
 .venv/bin/python scripts/export_submission.py --log-dir logs --out submissions/my-run.jsonl.gz
 ```
 
 Each line is one question run: the question and its `version`, the model and its settings,
-every filing, token usage, time, and how the run ended. Send the file, and optionally the
-Inspect logs, to the maintainers.
+every filing, token usage, time, and how the run ended. `scripts/grade_remote.py
+--submission <file>` grades such a file with your own key.
 
 ## Layout
 
@@ -176,13 +199,14 @@ argo_bench/warehouse.py    read-only DuckDB / BigQuery access and month confinem
 argo_bench/sandbox/        the kernel, the Docker image, the macOS Seatbelt profile
 argo_bench/console/        Mission Control, the API the agent files through
 argo_bench/reference.py    the reference solver: replays a reference/ solution, no model
+argo_bench/remote.py       scoring with the grading service (the remote_grade scorer)
 argo_bench/system_prompt.md
 tasks/final.jsonl          the 210 questions; tasks/smoke.jsonl, the conformance check
 reference/                 reference solutions for 20 questions (and the smoke check)
 rungs.json                 the model rungs of the paper
 k8s/                       the sandbox namespace, RuntimeClass, NetworkPolicy, quota, RBAC;
                            k8s/templates/, the per-run pod
-scripts/                   run.py, load_duckdb.py, export_submission.py
+scripts/                   run.py, load_duckdb.py, export_submission.py, grade_remote.py
 analysis/spider2/          the appendix's Spider 2.0 measurements (spider2_shape.py and its
                            output); analysis/spider2/README.md says how to rerun it
 analysis/reward_hacking/   three development runs that read the grader, as scrubbed traces

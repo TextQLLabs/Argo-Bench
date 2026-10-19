@@ -35,6 +35,7 @@ def main() -> int:
             for sample in log.samples:
                 row = {
                     "question_id": sample.id, "epoch": sample.epoch,
+                    "version": (sample.metadata or {}).get("version", ""),
                     "model": log.eval.model, "generate_config": config,
                     "model_args": log.eval.model_args, "task_args": log.eval.task_args,
                     "rung": (log.eval.metadata or {}).get("rung", ""),

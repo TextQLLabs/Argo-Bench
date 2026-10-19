@@ -170,3 +170,69 @@ def test_reference_replays_the_smoke_question(tmp_path):
     assert log.status == "success"
     scores = {s.name: s.metrics["mean"].value for s in log.results.scores}
     assert scores == {"filed": 1.0, "conformance": 1.0}
+
+
+# ------------------------------------------------------------------- remote grading
+def _grading_client(responses: list, seen: list):
+    import httpx
+
+    def handler(request):
+        import gzip as _gzip
+        seen.append({"auth": request.headers.get("authorization"),
+                     "body": json.loads(_gzip.decompress(request.content))})
+        status, payload, headers = responses.pop(0)
+        return httpx.Response(status, json=payload, headers=headers)
+
+    return httpx.AsyncClient(transport=httpx.MockTransport(handler))
+
+
+def test_remote_grade_sends_filings_and_returns_the_reward(monkeypatch):
+    import asyncio
+    from argo_bench import remote
+
+    monkeypatch.setenv(remote.KEY_ENV, "argo_0123456789ab_" + "k" * 43)
+    seen: list = []
+    client = _grading_client([(200, {"grade_id": "g1", "question_id": "q", "reward": 0.5}, {})], seen)
+    filings = [{"kind": "ban_couriers", "payload": {"items": [{"driver_id": 1}]}}]
+    result = asyncio.run(remote.grade("q", "v1", filings, model="m", client=client))
+    assert result["reward"] == 0.5
+    assert seen[0]["auth"].startswith("Bearer argo_")
+    assert seen[0]["body"]["filings"] == filings and seen[0]["body"]["harness"] == "inspect"
+
+
+def test_remote_grade_retries_when_busy_and_raises_on_refusal(monkeypatch):
+    import asyncio
+    from argo_bench import remote
+
+    async def no_sleep(_):
+        return None
+
+    monkeypatch.setenv(remote.KEY_ENV, "argo_0123456789ab_" + "k" * 43)
+    monkeypatch.setattr(remote.asyncio, "sleep", no_sleep)
+    seen: list = []
+    client = _grading_client([(429, {"error": "rate limit"}, {"Retry-After": "1"}),
+                              (200, {"grade_id": "g", "question_id": "q", "reward": 1.0}, {})], seen)
+    assert asyncio.run(remote.grade("q", "v", [], client=client))["reward"] == 1.0
+    assert len(seen) == 2
+    client = _grading_client([(401, {"error": "invalid API key"}, {})], [])
+    with pytest.raises(remote.GraderRefused, match="invalid API key"):
+        asyncio.run(remote.grade("q", "v", [], client=client))
+
+
+def test_scorers_use_the_service_only_with_a_key(monkeypatch):
+    from argo_bench import remote
+    from argo_bench.task import scorers
+
+    monkeypatch.delenv(remote.KEY_ENV, raising=False)
+    assert len(scorers(False, "auto")) == 1
+    assert len(scorers(True, "auto")) == 2               # smoke: filed + conformance
+    monkeypatch.setenv(remote.KEY_ENV, "argo_0123456789ab_" + "k" * 43)
+    assert len(scorers(False, "auto")) == 2              # remote_grade + filed
+    assert len(scorers(False, "none")) == 1
+
+
+def test_question_lists_from_inspect_are_accepted():
+    from argo_bench.task import argo_bench
+    task = argo_bench(questions=["smoke-01-console"], engine="duckdb",
+                      database="/nonexistent.duckdb", grading="none")
+    assert [s.id for s in task.dataset] == ["smoke-01-console"]
