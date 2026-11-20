@@ -46,6 +46,11 @@ from typing import Any
 #: graded before the change, runs graded after — can tell them apart.
 PROTOCOL_VERSION = "2.0"
 
+#: The control plane a console files to when neither the call nor ``MISSION_CONTROL_TARGET``
+#: names one. A workspace that hosts the console sets it to its own operator's plane, which
+#: is what lets ``MissionControl()`` with no arguments file live there.
+DEFAULT_TARGET: str | None = None
+
 #: The singular methods this API replaced, and what to call instead. Kept so a call
 #: written the old way fails with a fix rather than an AttributeError, and so the
 #: harness can report it as invalid tool use instead of losing it.
@@ -788,6 +793,123 @@ def _kwargs_text(values: Mapping) -> str:
     return ", ".join(f"{k}={v!r}" for k, v in values.items())
 
 
+#: A journal line is `Action.to_dict()` as `json.dumps` writes it, and a batch payload ends
+#: with its count, so a long line is read from its two ends: a 50 MB filing is counted
+#: without being parsed into memory.
+_JOURNAL_HEAD = re.compile(
+    r'^\{"protocol": "[^"]*", "seq": (\d+), "kind": "([^"]*)", '
+    r'"sandbox_id": (?:"(?:[^"\\]|\\.)*"|null), "session_id": ("(?:[^"\\]|\\.)*"), '
+    r'"ts": ([0-9.eE+-]+), "payload": ')
+_JOURNAL_COUNT = re.compile(r'"count": (\d+)\}\}\s*$')
+_JOURNAL_PARSE_CHARS = 1 << 20
+#: How much of a long line's start is decoded to read its head.
+_JOURNAL_HEAD_BYTES = 1 << 16
+
+
+def _journal_entry(line: str | bytes) -> dict | None:
+    """``seq``, ``kind``, ``session_id``, ``ts`` and ``n_items`` of one journal line, or None
+    for a line that is not an action. A long line is decoded only at its two ends."""
+    head = count = None
+    if len(line) > _JOURNAL_PARSE_CHARS:
+        start, end = line[:_JOURNAL_HEAD_BYTES], line[-64:]
+        if isinstance(line, bytes):
+            start, end = start.decode("utf-8", "replace"), end.decode("utf-8", "replace")
+        head = _JOURNAL_HEAD.match(start)
+        count = _JOURNAL_COUNT.search(end) if head else None
+    if head and count:
+        return {"seq": int(head.group(1)), "kind": head.group(2),
+                "session_id": json.loads(head.group(3)), "ts": float(head.group(4)),
+                "n_items": int(count.group(1))}
+    try:
+        record = json.loads(line)
+    except ValueError:
+        return None
+    if not isinstance(record, Mapping) or not record.get("kind"):
+        return None
+    return {"seq": record.get("seq"), "kind": record["kind"],
+            "session_id": record.get("session_id"), "ts": record.get("ts"),
+            "n_items": len(items_of(record))}
+
+
+class _JournalIndex:
+    """What one journal holds, kept up to date by reading only what was appended to it
+    since the last look. The journal is append-only; reading it whole at every filing made a
+    loop of filings quadratic (2,000 one-id bans took 47 s against 2.6 s without the read)
+    and cost 0.75 s a filing after a 74 MB ban. A journal that shrank, was replaced, or no
+    longer reads where this index stopped is read again from the start."""
+
+    _TAIL = 64
+
+    def __init__(self) -> None:
+        self._reset(None)
+
+    def _reset(self, identity: tuple | None) -> None:
+        self.identity = identity
+        self.offset = 0
+        self.tail = b""
+        self.entries: list[dict] = []
+        self.last_seq: dict[Any, int] = {}
+
+    def refresh(self, path: str) -> None:
+        try:
+            st = os.stat(path)
+            with open(path, "rb") as fh:
+                identity = (st.st_dev, st.st_ino)
+                if identity != self.identity or st.st_size < self.offset:
+                    self._reset(identity)
+                elif self.tail:
+                    fh.seek(self.offset - len(self.tail))
+                    if fh.read(len(self.tail)) != self.tail:
+                        self._reset(identity)
+                fh.seek(self.offset)
+                for raw in fh:
+                    # A line another process is still writing waits for the next look.
+                    if not raw.endswith(b"\n"):
+                        break
+                    self.offset += len(raw)
+                    self.tail = (self.tail + raw[-self._TAIL:])[-self._TAIL:]
+                    entry = _journal_entry(raw) if raw.strip() else None
+                    if entry is None:
+                        continue
+                    self.entries.append(entry)
+                    session, seq = entry["session_id"], entry["seq"]
+                    if isinstance(seq, int) and isinstance(session, (str, int)):
+                        self.last_seq[session] = max(self.last_seq.get(session, 0), seq)
+        except OSError:
+            self._reset(None)
+
+
+_JOURNALS: dict[str, _JournalIndex] = {}
+_JOURNALS_LOCK = threading.Lock()
+
+
+def _journal_index(path: str | None) -> _JournalIndex | None:
+    """The up-to-date index of the journal at ``path``, shared by every console in this
+    process that files into it."""
+    if not path:
+        return None
+    key = os.path.abspath(path)
+    with _JOURNALS_LOCK:
+        index = _JOURNALS.setdefault(key, _JournalIndex())
+        index.refresh(key)
+    return index
+
+
+def _journal_last_seq(path: str | None, session_id: Any) -> int:
+    """The highest ``seq`` ``session_id`` already has in the journal at ``path`` (0 if none)."""
+    index = _journal_index(path)
+    if index is None or not isinstance(session_id, (str, int)):
+        return 0
+    return index.last_seq.get(session_id, 0)
+
+
+def _journal_entries(path: str | None) -> list[dict]:
+    """Every action in the journal at ``path``, whichever console wrote it; none when there
+    is no journal to read."""
+    index = _journal_index(path)
+    return [dict(e) for e in index.entries] if index else []
+
+
 #: Bound by `mission_control` when it defines the enum: the reasons live beside the API
 #: that documents them, and this module validates against them.
 Reason: Any = None
@@ -810,7 +932,8 @@ class _Console:
         contracts: Any = None,
     ) -> None:
         self.sandbox_id = id or get_sandbox_id()
-        self.target = (target or os.environ.get("MISSION_CONTROL_TARGET") or "").rstrip("/") or None
+        self.target = (target or os.environ.get("MISSION_CONTROL_TARGET") or DEFAULT_TARGET
+                       or "").rstrip("/") or None
         self.session_id = (session_id or os.environ.get("MISSION_CONTROL_SESSION")
                            or uuid.uuid4().hex)
         self.dry_run = bool(dry_run)
@@ -867,6 +990,19 @@ class _Console:
 
         _superseded.__name__ = name
         return _superseded
+
+    def _workspace_filings(self) -> list[dict]:
+        """Every action filed in this workspace: the journal's, whichever console filed
+        them (an agent that opens a second console, or a new one per cell, files into the
+        same journal), plus any of this console's own the journal failed to take."""
+        entries = _journal_entries(self.journal_path)
+        seen = {(e["session_id"], e["seq"], e["ts"]) for e in entries}
+        for action in self.actions:
+            if (action.session_id, action.seq, action.ts) not in seen:
+                entries.append({"seq": action.seq, "kind": action.kind,
+                                "session_id": action.session_id, "ts": action.ts,
+                                "n_items": action.n_items})
+        return entries
 
     # ------------------------------------------------------------------ batching
     def _batch(self, kind: str, build: Any, values: Any, shared: dict, *,
@@ -1475,7 +1611,11 @@ class _Console:
     # --------------------------------------------------------------------- transport
     def _file(self, kind: str, payload: dict) -> Action:
         payload = {k: v for k, v in payload.items() if v not in (None, "")}
-        self._seq += 1
+        # A session id can be reused (MissionControl(session_id=...), or two consoles open on
+        # one): carry on from the journal's last seq for it rather than start again at 1, so
+        # no two filings in a workspace share (session, seq). They did, and the capture's
+        # dedupe on that pair dropped a filing (c8-b2).
+        self._seq = max(self._seq, _journal_last_seq(self.journal_path, self.session_id)) + 1
         action = Action(seq=self._seq, kind=kind, payload=payload,
                         sandbox_id=self.sandbox_id, session_id=self.session_id)
         self.actions.append(action)
@@ -1587,7 +1727,14 @@ class _Console:
         return False
 
     def _get(self, path: str) -> Any:
-        """One JSON read from the control plane, or None. Never fatal, like `_post`."""
+        """One JSON read from the control plane, or None. Never fatal, like `_post`.
+
+        The read names this sandbox: a target with no run token in its path — a
+        workspace's default — leaves the sandbox id as the only way to say who is asking.
+        """
+        if self.sandbox_id:
+            path += ("&" if "?" in path else "?") + urllib.parse.urlencode(
+                {"sandbox_id": self.sandbox_id})
         try:
             with self._send_lock:
                 conn = self._connect()

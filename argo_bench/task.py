@@ -6,7 +6,7 @@
 
 Task options (``-T name=value``); the warehouse ones default to ``ARGO_WAREHOUSE_*``:
 
-``questions``   ``final`` (the 210 questions, tasks/final.jsonl), ``smoke`` (a no-data check of
+``questions``   ``final`` (the 209 questions, tasks/final.jsonl), ``smoke`` (a no-data check of
                 the whole path), ``reference`` (the questions with a reference solution), a
                 path to a JSONL of cards, or comma-separated question ids
 ``solver``      ``agent`` (default: the model runs the question) or ``reference`` (the

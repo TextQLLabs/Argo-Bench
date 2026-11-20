@@ -1,6 +1,7 @@
 """Reference solution for rng-01-bust-out-holds-sep.
 
-The warehouse is current to the end of September. Trust & safety wants payouts held on the
+The warehouse is current to the end of the question's month: September on the paper's
+warehouse, November on the released one. Trust & safety wants payouts held on the
 storefronts laundering stolen cards right now. The acquirer's rule describes the scheme: the
 storefront's ticket size and volume ramp on cards its customers have never used before, it
 keeps getting paid on schedule, and it goes dark before the chargebacks land. The chargebacks
@@ -10,8 +11,8 @@ open for a while, a card added within the hour before the payment is almost unhe
 honest storefront. Brand-new accounts that add a card and order at once are ordinary
 sign-ups. A laundering storefront takes such orders by the dozen, at a multiple of its usual
 ticket. The trap is the storefronts where the same scheme has already run its course. Some
-stopped trading weeks ago and are no longer paid. Others were still paid in late September
-for their last weeks but took no orders on the last day. They have gone dark, and a hold
+stopped trading weeks ago and are no longer paid. Others were still paid late in the month
+for their last weeks but took no orders on its last day. They have gone dark, and a hold
 catches nothing.
 
 The rule filed, over the last 30 days of the warehouse. A fresh-card order is a payment
@@ -27,8 +28,13 @@ account's opening in ``HZ_CUST_ACCOUNTS``, and the order's storefront in
 ``AP_CHECKS_ALL`` and ``AP_HOLDS_ALL``. Every step before the last returns counts only. The
 last step returns only the storefronts held.
 
-Score: 1.0 on the paper's warehouse and 0.999 on the released warehouse. Every laundering
-storefront is held and nothing else is. The shortfall is the fixed cost of the two reviews.
+Score: 1.0 on the paper's warehouse, where every laundering storefront is held and nothing else
+is. On the first released warehouse it scored 0.999, the shortfall being the fixed cost of the
+two reviews, and 0 on its 2026-10-23 rebuild, where only one storefront was still laundering in
+September. The released warehouse asks the question as of 30 November, because its September
+holds too little laundering to grade. It scores 0 there too: no storefront reaches ten
+fresh-card orders in the last 30 days (the two laundering storefronts take three each), so the
+rule holds nothing.
 """
 
 QUESTION = "rng-01-bust-out-holds-sep"

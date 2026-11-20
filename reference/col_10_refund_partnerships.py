@@ -26,8 +26,11 @@ and those regulars are the partners. One regular claiming is the building with a
 thief and is left alone; strangers' claims are the honest tail or theft, and are left alone.
 
 Score: 0.98 on the paper's warehouse (242 of 243 partnership couriers and 576 of 577 partners;
-one partnership is missed because only one of its partners ever claimed) and 0.94 on the
-released warehouse, where the same rule reaches fewer of the partners.
+one partnership is missed because only one of its partners ever claimed). About 0.91 on the
+released warehouse as rebuilt on 2026-10-23: there the rule catches 144 of 145 partnership
+couriers and all 358 partners, but also bans 4 couriers and 9 customers who are in no
+partnership. Before the rebuild it scored 0.94 there, where the same rule reached fewer of the
+partners.
 """
 
 QUESTION = "col-10-refund-partnerships"

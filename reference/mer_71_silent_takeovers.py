@@ -8,22 +8,32 @@ account change is an ``XX_AUDIT_TRAIL`` row on ``IBY_PMT_INSTR_USES_ALL`` (the p
 ``NEW_VALUE``), made through the merchant portal; the reported ones also carry support's
 ``PAYOUT ACCOUNT RESTORED`` row. The contact e-mail's history is in ``HZ_CONTACT_POINTS``: a
 replaced address stays behind as an inactive (``STATUS = 'I'``) row, retired at its
-``LAST_UPDATE_DATE``. Every reported takeover had its e-mail changed a day or two before the
-bank account; ordinary bank changes with an e-mail change have it more than a week apart.
+``LAST_UPDATE_DATE``. On the paper's warehouse every reported takeover had its e-mail changed
+a day or two before the bank account, and ordinary bank changes with an e-mail change have it
+more than a week apart. On the released warehouse the reported takeovers' gaps run to about
+four days, and some owners change their e-mail and their bank account within the same few
+days, so that gap alone no longer separates them (below).
 Sharing an account is not a tell on its own: hundreds of ordinary changes land on an account
 that is also on file for some other supplier, and restaurant groups share one account across
 their brands. What the reported takeovers share is the attacker's account: one takeover's
 account turns up in the next.
 
 The rule filed, over the 2024 portal changes that were never restored: the e-mail changed
-within three days before the bank account (the reported takeovers' gaps all fall inside two
-and a quarter days), or the new account is one we were at that moment paying another
-storefront into after a change of that same kind (a takeover not yet undone). Storefronts are
-reached through ``IBY_EXTERNAL_PAYEES_ALL`` (``SUPPLIER_SITE_ID``) and ``AP_SUPPLIER_SITES_ALL``,
-and held by their payables ``VENDOR_ID`` for account takeover. Every step before the last
-returns counts only; the last returns only the storefronts held.
+within three days before the bank account (on the paper's warehouse the reported takeovers'
+gaps all fall inside two and a quarter days), or the new account is one we were at that moment
+paying another storefront into after a change of that same kind (a takeover not yet undone).
+Storefronts are reached through ``IBY_EXTERNAL_PAYEES_ALL`` (``SUPPLIER_SITE_ID``) and
+``AP_SUPPLIER_SITES_ALL``, and held by their payables ``VENDOR_ID`` for account takeover. Every
+step before the last returns counts only; the last returns only the storefronts held.
 
-Score: 1.0 on the paper's warehouse and 1.0 on the released warehouse.
+Score: 1.0 on the paper's warehouse (14 held, the 14 victims). About 0.42 on the released
+warehouse as rebuilt on 2026-10-23: the rule holds 48 storefronts there, 13 of the 14 victims
+and 35 ordinary changes whose e-mail moved within three days before the bank account. Three
+victims there had their e-mail changed more than three days before the bank account; the second
+test (a takeover's account not yet undone) catches two of them, and the third is the one
+missed. On that warehouse honest owners change their e-mail around a bank change about as fast
+as the attackers do, and the best rule we measured (hold only the storefronts paid into an
+account a reported takeover was diverted to) reaches about 0.73.
 """
 
 QUESTION = "mer-71-silent-takeovers"

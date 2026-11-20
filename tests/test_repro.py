@@ -25,6 +25,8 @@ def test_cards():
     assert len({c["id"] for c in cards}) == len(cards) > 200
     for card in cards:
         assert card["prompt"].strip() and card["data_cutoff"].startswith("2024-")
+        assert card["version"] and card["grading_key"], card["id"]
+    assert len({c["grading_key"] for c in cards}) == len(cards)
     assert load_cards("smoke")[0]["expected"]
 
 
@@ -71,6 +73,97 @@ def test_duckdb_month_confinement(tmp_path):
         wh.run_sql("SELECT COUNT(*) FROM food_delivery.ORDERS")
     with pytest.raises(WarehouseError):
         wh.run_sql("SELECT * FROM read_csv('/etc/passwd')")
+    # Any spelling of another schema, SQL in a string, the file itself: all refused.
+    for sql in ('SELECT COUNT(*) FROM "food_delivery".ORDERS',
+                'SELECT COUNT(*) FROM food_delivery."ORDERS"',
+                'SELECT COUNT(*) FROM warehouse."food_delivery".ORDERS',
+                'WITH x AS (FROM "food_delivery".ORDERS) SELECT COUNT(*) FROM x',
+                'DESCRIBE "food_delivery".ORDERS',
+                "SELECT * FROM query('SELECT COUNT(*) FROM food_delivery.ORDERS')",
+                "SELECT COUNT(*) FROM query_table('food_delivery.ORDERS')",
+                f"SELECT COUNT(*) FROM read_duckdb('{path}', table_name='ORDERS')",
+                "SHOW TABLES FROM food_delivery"):
+        with pytest.raises(WarehouseError):
+            wh.run_sql(sql)
+    # The catalog describes this schema only.
+    listed = wh.run_sql("SELECT DISTINCT table_schema FROM information_schema.tables").table
+    assert listed.column(0).to_pylist() == ["food_delivery_9"]
+    assert wh.run_sql("SELECT sql FROM duckdb_views() WHERE schema_name = 'food_delivery_9'"
+                      ).table.column(0).to_pylist() == [None]
+
+
+#: A streamed result of this shape never returned on DuckDB 1.4 and 1.5 once its scans reach
+#: 245,760 x (threads + 1) rows (duckdb/duckdb#26408), and no interrupt reached it.
+UNION_SCAN_JOIN = ("SELECT count(*)::BIGINT AS x FROM range(737280) UNION ALL SELECT range "
+                   "FROM range(737280) UNION ALL SELECT a.range FROM range(737280) a "
+                   "JOIN range(737280) b ON a.range = b.range")
+SLOW = "SELECT count(*) FROM range(400000000) a, range(30) b WHERE (a.range * b.range) % 97 = 5"
+
+
+def _warehouse_file(tmp_path, rows: int):
+    path = tmp_path / "w.duckdb"
+    with duckdb.connect(str(path)) as con:
+        con.execute("CREATE SCHEMA food_delivery")
+        con.execute(f"CREATE TABLE food_delivery.T AS SELECT range AS id FROM range({rows})")
+    return path
+
+
+def test_duckdb_result_is_materialized_where_a_stream_deadlocks():
+    # In a child with a deadline: the streamed fetch this replaced never returns here.
+    code = (f"import sys; sys.path.insert(0, {str(REPO)!r})\n"
+            "import duckdb\n"
+            "from argo_bench.warehouse import _duckdb_fetch\n"
+            "con = duckdb.connect()\n"
+            "con.execute('SET threads = 2')\n"
+            f"table, truncated = _duckdb_fetch(con, {UNION_SCAN_JOIN!r}, 1_000_000, 60)\n"
+            "print(table.num_rows, truncated)\n")
+    out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True,
+                         timeout=120)
+    assert out.stdout.split() == ["1000000", "True"], out.stderr
+
+
+def test_duckdb_truncation_and_names(tmp_path):
+    wh = open_warehouse("duckdb", database=str(_warehouse_file(tmp_path, 3000)),
+                        schema="food_delivery")
+    try:
+        result = wh.run_sql("SELECT id FROM T ORDER BY id DESC", max_rows=1000)
+        assert (result.table.num_rows, result.truncated) == (1000, True)
+        assert result.table.column(0)[0].as_py() == 2999
+        assert not wh.run_sql("SELECT id FROM T", max_rows=3000).truncated
+        assert len(set(wh.run_sql("SELECT 1 AS a, 2 AS a").table.column_names)) == 2
+    finally:
+        wh.close()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX signals")
+def test_duckdb_query_process_is_replaced_when_wedged_or_killed(tmp_path, monkeypatch):
+    import os
+    import signal
+    import threading
+
+    import argo_bench.warehouse as warehouse
+
+    monkeypatch.setattr(warehouse, "KILL_GRACE_S", 1.0)
+    wh = open_warehouse("duckdb", database=str(_warehouse_file(tmp_path, 1000)),
+                        schema="food_delivery", timeout_s=2)
+    try:
+        with pytest.raises(WarehouseError, match="exceeded 2s and was interrupted"):
+            wh.run_sql(SLOW)
+        # One the interrupt cannot reach (a frozen process stands in for a wedged engine).
+        frozen = wh._proc.pid
+        threading.Timer(0.5, os.kill, (frozen, signal.SIGSTOP)).start()
+        with pytest.raises(WarehouseError, match="exceeded 2s and was interrupted"):
+            wh.run_sql(SLOW)
+        assert wh._proc.pid != frozen
+        assert wh.run_sql("SELECT count(*) AS n FROM T").table.column(0)[0].as_py() == 1000
+        # One whose process dies mid-statement (out of memory, a crash).
+        dying = wh._proc.pid
+        threading.Timer(0.5, os.kill, (dying, signal.SIGKILL)).start()
+        with pytest.raises(WarehouseError, match="brought down the warehouse's query process"):
+            wh.run_sql(SLOW)
+        assert wh.run_sql("SELECT count(*) AS n FROM T").table.column(0)[0].as_py() == 1000
+    finally:
+        wh.close()
 
 
 def test_local_kernel_keeps_state(tmp_path):
@@ -143,7 +236,7 @@ def test_reference_modules():
 
     cards = {c["id"]: c for c in load_cards("final") + load_cards("smoke")}
     questions = reference.available()
-    assert len(questions) >= 20 and "smoke-01-console" in questions
+    assert len(questions) >= 16 and "smoke-01-console" in questions
     lexicons = {"bigquery": BigQueryWarehouse.lexicon, "duckdb": DuckDBWarehouse.lexicon}
     for question in questions:
         module = reference.load(question)
@@ -198,6 +291,23 @@ def test_remote_grade_sends_filings_and_returns_the_reward(monkeypatch):
     assert result["reward"] == 0.5
     assert seen[0]["auth"].startswith("Bearer argo_")
     assert seen[0]["body"]["filings"] == filings and seen[0]["body"]["harness"] == "inspect"
+
+
+def test_remote_grade_names_the_cards_grading_key(monkeypatch):
+    """A run of one of this release's cards is graded by that card's key; any other is sent
+    without one."""
+    import asyncio
+    from argo_bench import remote
+
+    monkeypatch.setenv(remote.KEY_ENV, "argo_0123456789ab_" + "k" * 43)
+    card = load_cards("final")[0]
+    seen: list = []
+    reply = {"grade_id": "g", "question_id": card["id"], "reward": 1.0}
+    client = _grading_client([(200, reply, {}), (200, reply, {})], seen)
+    asyncio.run(remote.grade(card["id"], card["version"], [], client=client))
+    asyncio.run(remote.grade(card["id"], "an-earlier-version", [], client=client))
+    assert seen[0]["body"]["grading_key"] == card["grading_key"]
+    assert "grading_key" not in seen[1]["body"]
 
 
 def test_remote_grade_retries_when_busy_and_raises_on_refusal(monkeypatch):

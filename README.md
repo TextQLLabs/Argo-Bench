@@ -2,7 +2,7 @@
 
 Argo-Bench measures whether an agent can do real operations work on an enterprise data
 warehouse: investigate, compute, and then **act**. The warehouse is a simulated New York City
-food-delivery company, exported in Oracle E-Business Suite form. The 210 questions range from
+food-delivery company, exported in Oracle E-Business Suite form. The 209 questions range from
 fraud rings and promotion economics to the month-end close, courier pay, dashboards and
 forecasting. An agent is graded on what it **files** (bans, journal entries, balances,
 forecasts, dashboard data sources), not on what it writes in its answer.
@@ -11,6 +11,11 @@ This repository is the minimum needed to reproduce the paper's runs: the questio
 reference agent on [Inspect AI](https://inspect.aisi.org.uk), its two tool servers, the
 sandboxes `run_python` executes in, and the model configurations. The warehouse is released
 separately (see *Data*). The answer keys are held out (see *Scoring*).
+
+This is version 1.5: 209 questions on a rebuilt release of the warehouse, graded by the
+grading service against that release's answer keys (see *Versions*). The code and questions
+as first published, 210 questions on the warehouse as first released, are kept on the `v1.1`
+branch and release.
 
 ## How a run works
 
@@ -59,21 +64,34 @@ prompt says exactly what to file, and the `conformance` score must be 1.
 
 ## Data
 
-The warehouse is released separately as Parquet (71 GiB); the paper says where. Download
-it to `data/argo-bench` and load it into a local DuckDB file with the as-of month views:
+The warehouse is released separately as Parquet (about 70 GiB); the paper says where. These
+questions are asked of its v1.5 build: download that revision to `data/argo-bench` and load it
+into a local DuckDB file with the as-of month views:
 
 ```bash
 .venv/bin/python scripts/load_duckdb.py --kit data/argo-bench --out data/argo.duckdb
 ```
 
-The released warehouse is a sibling build (another random seed, same configuration) of
-the one the paper's runs queried. Questions that name specific entities (courier, storefront
-or promo-code ids, or counts drawn from the data) were re-drawn from the released build by
-each question's own selection rule; their cards say so in `prompt_edit`, and `version` still
-identifies the question as it was run. The four refund-collusion searches (`col-22-*`) were
-corrected after the final run to state how their grader weighs the review, and were run again
-on the new wording; their cards say so in `prompt_revision`, and `version` identifies the
-corrected question.
+The paper's runs queried a sibling build of the warehouse (another random seed, same
+configuration), which is held out. The released build was regenerated for v1.5 from the same
+seed as the one first released, by the simulator with the fixes a review of the released data
+called for: simulator artifacts an agent could key on instead of the business facts are gone
+(for example contiguous organization-id blocks and delivery legs timed at a fixed speed); the
+courier trip clock counts every leg of a chained run, which moves courier hours and the
+minimum-pay top-ups; a free trial membership converts or closes instead of rolling on at $0; a
+storefront that takes over another's premises no longer inherits its menu; and closures over
+Thanksgiving are logged as holiday closures. Its figures differ from the first release's, so
+v1.5 scores are not comparable with scores on v1.1.
+
+Questions that name specific entities or figures (courier, storefront or promo-code ids,
+counts and amounts drawn from the data) are drawn from the released build by each question's
+own selection rule; their cards say so in `prompt_edit`. `version` identifies the question as
+v1.5 asks it, and is what the grading service checks. The four refund-collusion searches
+(`col-22-*`) were corrected after the paper's final run to state how their grader weighs the
+review; their cards say so in `prompt_revision`. A card with `paper_data_cutoff` is asked at a
+later month end on the released build than in the paper's runs: on this build the paper's
+month holds too little laundering to grade, so `data_cutoff` is the released build's month and
+`paper_data_cutoff` the paper's.
 
 Or load it into BigQuery with the dataset's `setup/bigquery/load.sh` and
 `setup/bigquery/month_views.sh` (the paper's runs used BigQuery; the release's README has
@@ -83,7 +101,7 @@ the commands, and loaders for Snowflake, Databricks, Trino and Iceberg), then se
 ## Running
 
 ```bash
-# one model rung, all 210 questions
+# one model rung, all 209 questions
 .venv/bin/python scripts/run.py --rung opus-5.5-high
 
 # the same thing with plain Inspect
@@ -99,7 +117,8 @@ the commands, and loaders for Snowflake, Databricks, Trino and Iceberg), then se
 
 Task options (`-T`): `questions` (`final`, `smoke`, `reference`, a JSONL path, or
 comma-separated ids), `solver` (`agent` or `reference`), `engine`, `database`, `schema`,
-`credentials`, `sandbox`, `image`, `python`, `keep_workdirs`. See `argo_bench/task.py`.
+`credentials`, `sandbox`, `image`, `python`, `keep_workdirs`, `grading`. See
+`argo_bench/task.py`.
 
 ### Settings of the paper's runs
 
@@ -135,9 +154,9 @@ results and the Mission Control journal travel inside the kernel's own stdin/std
 
 ## Reference solutions
 
-`reference/` holds reference solutions for 20 of the questions: the four that the paper and
+`reference/` holds reference solutions for 16 of the questions: the four that the paper and
 its website walk through (`col-10-refund-partnerships`, `ds-22-margin-monthly-per-order`,
-`fc-12-true-ups-may`, `mer-71-silent-takeovers`) and sixteen more. Each one is the sequence of
+`fc-12-true-ups-may`, `mer-71-silent-takeovers`) and twelve more. Each one is the sequence of
 tool calls an agent would make, with a docstring that says what the question leaves out and
 the rule the solution files. `-T solver=reference` replays a question's reference through the
 same two servers a model gets, with no model, and keeps what it files like any run:
@@ -155,8 +174,12 @@ their scores on the paper's warehouse and on the released one.
 ## Scoring
 
 The answer keys are held out, so the benchmark cannot be trained on. Runs are scored by the
-Argo-Bench grading service, which holds the keys and runs the benchmark's grader: send it a
-run's filings with an API key (from the Argo-Bench team) and it returns the question's reward.
+Argo-Bench grading service (`https://grade.argo-bench.com`), which holds the keys and runs the
+benchmark's grader: send it a run's filings with an API key (from the Argo-Bench team) and it
+returns the question's reward. The service grades every version of the benchmark. Each card
+names its `grading_key`, the answer key and grader of v1.5's version of the question, and
+`argo_bench/remote.py` sends it with the filings, so a run of these cards is graded against
+the v1.5 warehouse's keys.
 
 ```bash
 export ARGO_GRADER_KEY=argo_...
@@ -201,8 +224,8 @@ argo_bench/console/        Mission Control, the API the agent files through
 argo_bench/reference.py    the reference solver: replays a reference/ solution, no model
 argo_bench/remote.py       scoring with the grading service (the remote_grade scorer)
 argo_bench/system_prompt.md
-tasks/final.jsonl          the 210 questions; tasks/smoke.jsonl, the conformance check
-reference/                 reference solutions for 20 questions (and the smoke check)
+tasks/final.jsonl          the 209 questions; tasks/smoke.jsonl, the conformance check
+reference/                 reference solutions for 16 questions (and the smoke check)
 rungs.json                 the model rungs of the paper
 k8s/                       the sandbox namespace, RuntimeClass, NetworkPolicy, quota, RBAC;
                            k8s/templates/, the per-run pod
@@ -211,6 +234,19 @@ analysis/spider2/          the appendix's Spider 2.0 measurements (spider2_shape
                            output); analysis/spider2/README.md says how to rerun it
 analysis/reward_hacking/   three development runs that read the grader, as scrubbed traces
 ```
+
+## Versions
+
+| version | questions | warehouse | where |
+| --- | --- | --- | --- |
+| v1.5 | 209 | rebuilt release (same seed, simulator fixes) | `main` |
+| v1.1 | 210 | first release | branch and release `v1.1` |
+
+Since v1.1, six questions most settings solved were retired and replaced by six harder ones in
+the same business areas (v1.4); several answer keys and graders were corrected; and v1.5 moved
+the questions to the rebuilt warehouse, re-drawing the entities and figures they name from it.
+`vd-f2-quotes-priced-off-another-storefront` is not in v1.5: on the rebuilt warehouse no
+storefront's quotes are priced off another's, so the question has nothing to find.
 
 ## License
 

@@ -9,7 +9,7 @@ thing — every account, every period, every entry — not one call per row:
 
     from mission_control import MissionControl, Reason
 
-    mc = MissionControl(id=get_sandbox_id(), target="https://<operator-host>")
+    mc = MissionControl()
 
     mc.ban_merchants([371778, 371904], reason=Reason.DISCOUNT_ABUSE)
     mc.end_campaigns([9912, 9914], reason=Reason.NEGATIVE_CONTRIBUTION_MARGIN)
@@ -137,10 +137,11 @@ class MissionControl(_Console):
     Parameters
     ----------
     id:
-        Sandbox identifier. Pass `get_sandbox_id()` to resolve it from the runtime.
+        Sandbox identifier. Omitted, it is resolved from the runtime by `get_sandbox_id()`.
     target:
-        Base URL of the control plane. When omitted, actions are still validated,
-        printed and journalled — useful for a dry run.
+        Base URL of the control plane. Omitted, it is ``MISSION_CONTROL_TARGET``, then the
+        workspace's own control plane where one is configured. With neither, actions are
+        still validated, printed and journalled — useful for a dry run.
     dry_run:
         Validate and journal, but never open a connection.
     journal_path:
@@ -156,42 +157,63 @@ class MissionControl(_Console):
     """
 
     def status(self) -> dict:
-        """What has been filed, and whether the control plane took it.
+        """What has been filed in this workspace, and where it went.
 
-        ``actions_filed`` counts calls; ``decisions_filed`` counts the items inside
-        them. One ban_customers call closing 3,000 accounts is 1 and 3,000, and an
-        operator checking their work wants the second number.
+        The counts are the workspace's, read back from its journal: every console's
+        filings, so a new ``MissionControl()`` reports what earlier ones filed too.
+        ``this_console`` counts this one's own. ``actions_filed`` counts calls;
+        ``decisions_filed`` counts the items inside them. One ban_customers call closing
+        3,000 accounts is 1 and 3,000, and an operator checking their work wants the
+        second number.
+
+        ``delivery`` says where filings go. With no control plane configured they are
+        recorded in this workspace (its journal and the ``[[MC]]`` lines), which is all a
+        filing needs, and ``actions_delivered`` is None: there is nothing to deliver.
         """
-        delivered = sum(1 for a in self.actions if a.delivered)
+        filed = self._workspace_filings()
+        live = bool(self.target) and not self.dry_run
         return {
             "sandbox_id": self.sandbox_id,
             "session_id": self.session_id,
             "target": self.target,
-            "actions_filed": len(self.actions),
-            "decisions_filed": sum(a.n_items for a in self.actions),
-            "actions_delivered": delivered,
+            "actions_filed": len(filed),
+            "decisions_filed": sum(e["n_items"] for e in filed),
+            "this_console": {"actions_filed": len(self.actions),
+                             "decisions_filed": sum(a.n_items for a in self.actions)},
+            "delivery": ("sent to the control plane" if live
+                         else "dry run: validated and recorded, not sent" if self.target
+                         else "recorded in this workspace; no control plane is configured, "
+                              "so there is nothing to deliver"),
+            "actions_delivered": sum(1 for a in self.actions if a.delivered) if live else None,
             "delivery_errors": len(self.delivery_errors),
             "last_error": self.delivery_errors[-1] if self.delivery_errors else None,
         }
 
     def summary(self) -> str:
-        """One line: how many decisions were filed, in how many calls, by kind, and how many
-        calls reached the control plane. Print it when you are done::
+        """One line: how many decisions this workspace has filed, in how many calls, by kind.
+        Print it when you are done::
 
             print(mc.summary())
-            # 3002 decision(s) in 2 action(s) [ban_customers=3000, end_campaigns=2] — delivered 2
+            # 3002 decision(s) in 2 action(s) [ban_customers=3000, end_campaigns=2] — recorded
+
+        With a control plane configured, the line ends with how many of this console's
+        calls reached it instead ("— delivered 2 of this console's 2").
         """
+        filed = self._workspace_filings()
         counts: dict[str, int] = {}
-        for action in self.actions:
-            counts[action.kind] = counts.get(action.kind, 0) + action.n_items
+        for entry in filed:
+            counts[entry["kind"]] = counts.get(entry["kind"], 0) + entry["n_items"]
         if not counts:
             return "no actions filed"
         # Item counts, not call counts: `ban_customers=3000` is what was decided, where
         # `ban_customers=1` would report only that the method was reached.
         body = ", ".join(f"{k}={v}" for k, v in sorted(counts.items()))
-        st = self.status()
-        return (f"{st['decisions_filed']} decision(s) in {len(self.actions)} action(s) "
-                f"[{body}] — delivered {st['actions_delivered']}")
+        tail = "recorded"
+        if self.target and not self.dry_run and self.actions:
+            delivered = sum(1 for a in self.actions if a.delivered)
+            tail = f"delivered {delivered} of this console's {len(self.actions)}"
+        return (f"{sum(counts.values())} decision(s) in {len(filed)} action(s) "
+                f"[{body}] — {tail}")
 
     def ban_merchants(self, ids: Sequence[Any], reason: Any = None,
                       evidence: Mapping | None = None) -> Action:
