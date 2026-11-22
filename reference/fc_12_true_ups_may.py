@@ -20,11 +20,11 @@ normal-demand weeks, backtests how well a four-week level is known, and forecast
 Carlo over the pay level.
 
 The step 2 cell is written for the paper's prompt (2.31 million connected hours);
-``steps(prompt)`` puts in the plan the prompt states. On the released warehouse as rebuilt on
-2026-10-23 that is 2.31 million too (it was 2.30 million before the rebuild).
+``steps(prompt)`` puts in the plan the prompt states. On the released warehouse (v1.5) that is
+2.29 million (2.31 million on its 2026-10-23 rebuild, 2.30 million before it).
 
-Score: 0.94 on the paper's warehouse and about 0.96 on the released warehouse as rebuilt on
-2026-10-23 (0.87 before the rebuild). On the paper's warehouse, and on the released one before
+Score: 0.94 on the paper's warehouse and about 0.95 on the released warehouse (v1.5; 0.96 on
+its 2026-10-23 rebuild, 0.87 before it). On the paper's warehouse, and on the released one before
 the rebuild, the truth sits a little above the individual floor, because the week still open on
 30 April ran short, which no filing from April could see.
 """

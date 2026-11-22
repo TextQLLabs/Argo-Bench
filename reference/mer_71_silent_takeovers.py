@@ -26,14 +26,10 @@ Storefronts are reached through ``IBY_EXTERNAL_PAYEES_ALL`` (``SUPPLIER_SITE_ID`
 ``AP_SUPPLIER_SITES_ALL``, and held by their payables ``VENDOR_ID`` for account takeover. Every
 step before the last returns counts only; the last returns only the storefronts held.
 
-Score: 1.0 on the paper's warehouse (14 held, the 14 victims). About 0.42 on the released
-warehouse as rebuilt on 2026-10-23: the rule holds 48 storefronts there, 13 of the 14 victims
-and 35 ordinary changes whose e-mail moved within three days before the bank account. Three
-victims there had their e-mail changed more than three days before the bank account; the second
-test (a takeover's account not yet undone) catches two of them, and the third is the one
-missed. On that warehouse honest owners change their e-mail around a bank change about as fast
-as the attackers do, and the best rule we measured (hold only the storefronts paid into an
-account a reported takeover was diverted to) reaches about 0.73.
+Score: 1.0 on the paper's warehouse (14 held, the 14 victims). About 0.92 on the released
+warehouse (v1.5), where the rule holds 12 of the 14 victims: the two it misses had their e-mail
+changed on a Thursday and the bank account the following Monday, 92 and 96 hours later, which
+neither test catches. On the warehouse's 2026-10-23 rebuild it scored about 0.42.
 """
 
 QUESTION = "mer-71-silent-takeovers"

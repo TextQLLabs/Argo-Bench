@@ -16,12 +16,16 @@ itself; those are not customer cancellations and stay out.
 
 The rule filed: storefronts reached through ``HR_ORGANIZATION_INFORMATION`` (``XX_STOREFRONT``,
 the VENDOR_ID in ``ORG_INFORMATION1``) and their 2024 orders by ``SHIP_FROM_ORG_ID``; the
-platform share summed over pickup orders that went through (not cancelled or rejected); the
+platform share summed over the pickup orders, cancelled ones included (a customer cancellation
+whose charge stood was paid at the discounted price, so the platform funded its discount); the
 cancellation expense on orders the customer cancelled, a quarter of the books at a time; and
 the five-star reviews (``XX_REVIEWS``) of the storefront's 2024 orders. Every query is
 restricted to the listed storefronts.
 
-Score: 1.0 on the paper's warehouse and 1.0 on the released warehouse.
+Score: 1.0 on the paper's warehouse and 1.0 on the released warehouse (v1.5). Until v1.5 the
+solution summed only the pickups that went through, as the answer key then did; the key now
+counts the cancelled ones too, and dropping them gets three storefronts' figure wrong on the
+released warehouse (0.98).
 """
 
 import re
@@ -81,15 +85,14 @@ LEFT JOIN promo p ON p.HEADER_ID = o.HEADER_ID
 GROUP BY 1, 2, 3, 4
 ORDER BY 1, 2, 3, 4"""}),
 
-        # 2. The platform's share of the discounts on each storefront's pickup orders that
-        #    went through.
+        # 2. The platform's share of the discounts on each storefront's pickup orders,
+        #    cancelled ones included.
         ("run_sql", {"sql": orders + """
 SELECT o.vendor_id, COUNT(DISTINCT o.HEADER_ID) AS discounted_pickups,
        SUM(CAST(pa.ATTRIBUTE1 AS NUMERIC)) AS pickup_promo_platform_usd
 FROM orders o
 JOIN OE_PRICE_ADJUSTMENTS pa ON pa.HEADER_ID = o.HEADER_ID
-WHERE o.SHIPPING_METHOD_CODE = 'PICKUP' AND o.CANCELLED_FLAG = 'N'
-  AND pa.ATTRIBUTE1 IS NOT NULL
+WHERE o.SHIPPING_METHOD_CODE = 'PICKUP' AND pa.ATTRIBUTE1 IS NOT NULL
 GROUP BY o.vendor_id"""}),
 
         # 3-6. The compensation: the cancellation expense the books tie to each order the

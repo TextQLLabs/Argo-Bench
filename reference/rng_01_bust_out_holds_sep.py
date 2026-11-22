@@ -9,16 +9,17 @@ are not the way in. They lag the order by weeks, and hundreds of honest storefro
 themselves hit by stolen cards. What stands out is the card. On an account that has been
 open for a while, a card added within the hour before the payment is almost unheard of at an
 honest storefront. Brand-new accounts that add a card and order at once are ordinary
-sign-ups. A laundering storefront takes such orders by the dozen, at a multiple of its usual
-ticket. The trap is the storefronts where the same scheme has already run its course. Some
-stopped trading weeks ago and are no longer paid. Others were still paid late in the month
+sign-ups. A laundering storefront takes such orders again and again (dozens on the paper's
+warehouse, three on the released one), at a multiple of its usual ticket. The trap is the
+storefronts where the same scheme has already run its course. Some stopped trading weeks ago
+and are no longer paid. Others were still paid late in the month
 for their last weeks but took no orders on its last day. They have gone dark, and a hold
 catches nothing.
 
 The rule filed, over the last 30 days of the warehouse. A fresh-card order is a payment
 approved on a card added to the customer's account at most an hour before, on an account
-open at least 7 days. A storefront is held when all of these hold: at least ten fresh-card
-orders, making up at least 5% of its orders; a larger ticket on those orders than on its
+open at least 7 days. A storefront is held when all of these hold: at least three fresh-card
+orders, making up at least 1% of its orders; a larger ticket on those orders than on its
 other orders; a payout released in the last two weeks with no hold open on its invoices;
 and orders still coming in on the warehouse's last day. Payments are in
 ``XX_PAYMENT_AUTHS``, the card and the day it was added in ``XX_PAYMENT_INSTRUMENTS``, the
@@ -32,9 +33,13 @@ Score: 1.0 on the paper's warehouse, where every laundering storefront is held a
 is. On the first released warehouse it scored 0.999, the shortfall being the fixed cost of the
 two reviews, and 0 on its 2026-10-23 rebuild, where only one storefront was still laundering in
 September. The released warehouse asks the question as of 30 November, because its September
-holds too little laundering to grade. It scores 0 there too: no storefront reaches ten
-fresh-card orders in the last 30 days (the two laundering storefronts take three each), so the
-rule holds nothing.
+holds too little laundering to grade. There the two laundering storefronts take three
+fresh-card orders each in the last 30 days (1.6% and 2.0% of their orders) and no other
+storefront takes more than two. Until v1.5 the rule asked for ten such orders making up 5%,
+which held nothing on the released warehouse (0); at three and 1% it holds the same four
+storefronts on the paper's warehouse, where none takes between three and fifteen, and holds the
+two laundering storefronts on the released one: 0.999 there, the shortfall being the fixed cost
+of the two reviews.
 """
 
 QUESTION = "rng-01-bust-out-holds-sep"
@@ -114,13 +119,13 @@ open_holds AS (
   GROUP BY inv.VENDOR_ID
 ),
 -- The acquirer's tells: paid on schedule (a payout in the last two weeks covers weekly and
--- fortnightly payees, and nothing is held yet), and a ramp on fresh cards (by the dozen, a
+-- fortnightly payees, and nothing is held yet), and a ramp on fresh cards (three or more, a
 -- real share of the storefront's orders, at a bigger ticket than its other orders).
 rule AS (
   SELECT f.*,
          COALESCE(pay.last_payout_day >= {days_before_14}, FALSE)
            AND COALESCE(oh.open_holds, 0) = 0 AS paid_on_schedule,
-         f.fresh_card_orders >= 10 AND f.fresh_card_share >= 0.05
+         f.fresh_card_orders >= 3 AND f.fresh_card_share >= 0.01
            AND f.fresh_card_ticket > f.other_ticket AS fresh_card_ramp
   FROM features f
   CROSS JOIN clock k
@@ -162,7 +167,7 @@ ORDER BY 1, 2""")}),
 
     # 2. Storefronts by how many fresh-card orders they took in the last 30 days. Honest ones
     #    take one or two at most. At a tiny storefront even one can be 5% of its orders, so
-    #    the rule needs a count as well as a share. A laundering one takes them by the dozen.
+    #    the rule needs a count as well as a share. A laundering one takes three or more.
     #    Of those, which are still paid on schedule, and which still took orders on the last
     #    day? A storefront that ramped and then went dark is past holding. Counts only.
     ("run_sql", {"sql": _sql(_STOREFRONTS, """\

@@ -5,7 +5,7 @@ Busy Kitchen held, the minutes the holds added to their quoted prep times, and h
 storefronts held at least one order. The warehouse keeps no hold flag. Each order's prep
 quote (``XX_ORDER_PREP_QUOTES``) says who set it: ``MERCHANT_ORDER`` is a quote the storefront
 set on this order rather than its standing default, but most of those are the large-order
-bump the prompt warns about, not holds. Counting every ``MERCHANT_ORDER`` quote, or every one at
+bump, not holds (the paper's prompt warned about it; v1.5's does not). Counting every ``MERCHANT_ORDER`` quote, or every one at
 a Busy Kitchen storefront, overstates the tile many times over; counting only quotes off the
 5-minute grid drops holds of whole multiples of five.
 
