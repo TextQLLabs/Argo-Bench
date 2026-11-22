@@ -13,6 +13,8 @@ requires-python = ">=3.11"
 dependencies = [
   # The harness: Inspect AI at the version the paper's runs used, and its MCP client.
   "inspect-ai==0.3.263",
+  # inspect-ai 0.3.263 imports acp.helpers, which agent-client-protocol 1.0 removed.
+  "agent-client-protocol>=0.12,<1",
   "mcp>=2.0,<3",
   "anthropic",
   "openai",
