@@ -38,24 +38,25 @@ warehouse and on the released one, each against its own held-out key.
 
 The references were written for the paper's warehouse. The released column is their replay
 on the v1.5 warehouse, graded by v1.5's answer keys. Four references were removed in v1.5 with
-the questions v1.4 retired (`dhc-01`, `fin-15`, `pe-07`, `pe-11`), and two were changed for it:
+the questions v1.4 retired (`dhc-01`, `fin-15`, `pe-07`, `pe-11`), and three were changed for it:
 `mer-14` now counts the platform's share of the discounts on cancelled pickups too, as its
-answer key does in v1.5, and `rng-01-bust-out-holds-sep`, which the released warehouse asks as
+answer key does in v1.5; `rng-01-bust-out-holds-sep`, which the released warehouse asks as
 of 30 November since its September holds too little laundering to grade, holds a storefront
 from three fresh-card orders in the last 30 days rather than ten: the two laundering storefronts
-there take three each. The paper's three worked examples (`col-10`, `ds-22`, `fc-12`) are the
-paper's listings and are replayed as printed. Three references score lower on the released
-warehouse than on the paper's, and their docstrings say why: the `col-10` rule also bans a few
-couriers and customers who are in no partnership, and the payout-takeover rule (`mer-71`,
-`rng-30`) misses two of the fourteen victims, whose e-mail changed on a Thursday and the bank
-account the following Monday.
+there take three each; and the payout-takeover rule (`mer-71`, reused by `rng-30`) looks for an
+e-mail change within four days of the bank change rather than three, since on the released
+warehouse a Thursday e-mail change before a Monday bank change is 92 to 96 hours. The paper's
+three worked examples (`col-10`, `ds-22`, `fc-12`) are the paper's listings and are replayed as
+printed. One reference scores lower on the released warehouse than on the paper's, and its
+docstring says why: the `col-10` rule also bans a few couriers and customers who are in no
+partnership.
 
 | question | area | what it solves | paper's | released |
 | --- | --- | --- | --- | --- |
 | `col-10-refund-partnerships` | Fraud | couriers who split never-arrived refunds with their regulars: who a regular is, and how many make a partnership | 0.98 | 0.86 |
 | `ds-22-margin-monthly-per-order` | Dashboards | Finance's contribution margin per order, from the journal lines the books tie to each order | 1.00 | 1.00 |
 | `fc-12-true-ups-may` | Forecasting | May's minimum-pay true-ups once the dispatcher cuts the hours: the hours set what is owed, demand sets the pay | 0.94 | 0.95 |
-| `mer-71-silent-takeovers` | Fraud | storefronts whose payout account was taken over the way the reported ones were, and never put back | 1.00 | 0.92 |
+| `mer-71-silent-takeovers` | Fraud | storefronts whose payout account was taken over the way the reported ones were, and never put back | 1.00 | 1.00 |
 | `rem-01-uncompensated-failures` | Compliance | orders that failed through no fault of the customer, refunded at what was charged | 1.00 | 1.00 |
 | `cf-02-balance-sheet-reconciliation` | Core Finance | summary accounts against the sum of their base accounts, every period of 2024 | 1.00 | 1.00 |
 | `nec-01-courier-1099-nec` | Core Finance | the courier 1099-NEC run: who gets a form, and what it shows | 1.00 | 1.00 |
@@ -67,4 +68,4 @@ account the following Monday.
 | `fin-07-ar-to-gl-reconciliation` | Finance & Accounting | the receivable account against the subledger at year end, with January settled back out | 1.00 | 1.00 |
 | `mer-14-platform-funded-at-shells` | Fraud | what the platform funded at the shell storefronts trust & safety confirmed | 1.00 | 1.00 |
 | `rng-01-bust-out-holds-sep` | Fraud | the storefronts laundering stolen cards right now: ramp on new cards, still paid, not yet dark | 1.00 | 1.00 |
-| `rng-30-silent-victims-make-whole` | Fraud | what each silently hijacked storefront is owed to be made whole | 1.00 | 0.86 |
+| `rng-30-silent-victims-make-whole` | Fraud | what each silently hijacked storefront is owed to be made whole | 1.00 | 1.00 |

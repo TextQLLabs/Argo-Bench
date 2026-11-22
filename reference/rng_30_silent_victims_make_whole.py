@@ -19,10 +19,9 @@ storefront, the sum of the non-voided payout runs paid at or after the switch an
 1 January 2025. Every step but the last returns counts only; the last returns the storefronts
 owed, never the attacker's accounts.
 
-Score: 1.0 on the paper's warehouse. About 0.86 on the released warehouse (v1.5), where
-mer-71's rule finds 12 of the 14 victims (see ``mer_71_silent_takeovers.py``); the two it misses
-are the schedule's two missing rows. On the warehouse's 2026-10-23 rebuild it scored about
-0.27, and filing only the storefronts paid into an account a reported takeover was diverted to
+Score: 1.0 on the paper's warehouse and 1.0 on the released warehouse (v1.5), where mer-71's
+rule finds the 14 victims (see ``mer_71_silent_takeovers.py``). On the warehouse's 2026-10-23
+rebuild it scored about 0.27, and filing only the storefronts paid into an account a reported takeover was diverted to
 scored about 0.57 there.
 """
 

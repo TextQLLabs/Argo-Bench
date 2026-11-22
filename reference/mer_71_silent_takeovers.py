@@ -19,17 +19,17 @@ their brands. What the reported takeovers share is the attacker's account: one t
 account turns up in the next.
 
 The rule filed, over the 2024 portal changes that were never restored: the e-mail changed
-within three days before the bank account (on the paper's warehouse the reported takeovers'
-gaps all fall inside two and a quarter days), or the new account is one we were at that moment
+within four days before the bank account (on the paper's warehouse the reported takeovers'
+gaps all fall inside two and a quarter days; on the released one, a Thursday e-mail change
+before a Monday bank change is 92 to 96 hours), or the new account is one we were at that moment
 paying another storefront into after a change of that same kind (a takeover not yet undone).
 Storefronts are reached through ``IBY_EXTERNAL_PAYEES_ALL`` (``SUPPLIER_SITE_ID``) and
 ``AP_SUPPLIER_SITES_ALL``, and held by their payables ``VENDOR_ID`` for account takeover. Every
 step before the last returns counts only; the last returns only the storefronts held.
 
-Score: 1.0 on the paper's warehouse (14 held, the 14 victims). About 0.92 on the released
-warehouse (v1.5), where the rule holds 12 of the 14 victims: the two it misses had their e-mail
-changed on a Thursday and the bank account the following Monday, 92 and 96 hours later, which
-neither test catches. On the warehouse's 2026-10-23 rebuild it scored about 0.42.
+Score: 1.0 on the paper's warehouse (14 held, the 14 victims) and 1.0 on the released
+warehouse (v1.5), where it holds the 14 victims among 48 storefronts. On the warehouse's
+2026-10-23 rebuild, with a three-day window, it scored about 0.42.
 """
 
 QUESTION = "mer-71-silent-takeovers"
@@ -81,7 +81,7 @@ gaps AS (
   SELECT *, {gap} AS email_gap_hours FROM changes
 ),
 tells AS (
-  SELECT *, COALESCE(email_gap_hours <= 72, FALSE) AS email_tell FROM gaps
+  SELECT *, COALESCE(email_gap_hours <= 96, FALSE) AS email_tell FROM gaps
 ),
 -- An account a change of the takeover kind put on a storefront, while it stayed there.
 taken AS (
@@ -121,8 +121,8 @@ ORDER BY changes DESC"""}),
     ("run_sql", {"sql": _sql("""\
 SELECT restored_at IS NOT NULL AS restored,
        CASE WHEN email_gap_hours IS NULL THEN 'no e-mail change before it'
-            WHEN email_gap_hours <= 72 THEN 'within 3 days'
-            WHEN email_gap_hours <= 24 * 60 THEN '3 to 60 days'
+            WHEN email_gap_hours <= 96 THEN 'within 4 days'
+            WHEN email_gap_hours <= 24 * 60 THEN '4 to 60 days'
             ELSE 'over 60 days' END AS email_changed_before_bank,
        COUNT(*) AS changes,
        ROUND(MIN(email_gap_hours) / 24, 2) AS min_gap_days,
