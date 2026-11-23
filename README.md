@@ -64,7 +64,7 @@ prompt says exactly what to file, and the `conformance` score must be 1.
 
 ## Data
 
-The warehouse is released separately as Parquet (about 70 GiB); the paper says where. These
+The warehouse is released separately as Parquet (about 73 GiB); the paper says where. These
 questions are asked of its v1.5 build: download that revision to `data/argo-bench` and load it
 into a local DuckDB file with the as-of month views:
 
