@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any
 
 import anyio
+import pyarrow as pa
 import pyarrow.parquet as pq
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
@@ -62,6 +63,92 @@ def render_preview(table, rows: int, width: int = 80) -> str:
     return "\n".join(lines)
 
 
+def _interval_text(value) -> str:
+    """A month/day/nanosecond interval the way the engines print one: ``1 day 02:30:00``."""
+    parts = []
+    years, months = divmod(abs(value.months), 12)
+    sign = "-" if value.months < 0 else ""
+    parts += [f"{sign}{n} {unit}{'s' if n != 1 else ''}"
+              for n, unit in ((years, "year"), (months, "month")) if n]
+    if value.days:
+        parts.append(f"{value.days} day{'s' if abs(value.days) != 1 else ''}")
+    nanos = value.nanoseconds
+    if nanos or not parts:
+        seconds, fraction = divmod(abs(nanos), 1_000_000_000)
+        clock = (f"{'-' if nanos < 0 else ''}{seconds // 3600:02d}:{seconds // 60 % 60:02d}"
+                 f":{seconds % 60:02d}")
+        if fraction:
+            clock += f".{fraction:09d}".rstrip("0")
+        parts.append(clock)
+    return " ".join(parts)
+
+
+def _repeats_a_field_name(kind) -> bool:
+    """Whether ``kind`` holds a struct two of whose fields share a name. DuckDB's unnamed row
+    value ``(a, b)`` names every field "", and neither pandas nor ``to_pylist`` reads that."""
+    names = [kind.field(i).name for i in range(kind.num_fields)]
+    if pa.types.is_struct(kind) and len(set(names)) < len(names):
+        return True
+    return any(_repeats_a_field_name(kind.field(i).type) for i in range(kind.num_fields))
+
+
+def _parquet_holds(kind) -> bool:
+    try:
+        pq.write_table(pa.table({"c": pa.nulls(0, kind)}), pa.BufferOutputStream())
+    except pa.ArrowNotImplementedError:
+        return False
+    except Exception:                    # not a question of the type: let the real write say
+        return True
+    return True
+
+
+def _plain(scalar) -> Any:
+    """An Arrow scalar as JSON can write it: a struct whose names repeat becomes a list."""
+    kind = scalar.type
+    if not scalar.is_valid:
+        return None
+    if pa.types.is_struct(kind):
+        names = [kind.field(i).name for i in range(kind.num_fields)]
+        values = [_plain(scalar[i]) for i in range(kind.num_fields)]
+        return dict(zip(names, values, strict=True)) if len(set(names)) == len(names) else values
+    if kind.num_fields:                                  # a list or a map: its entries
+        return [_plain(item) for item in scalar.values]
+    value = scalar.as_py()
+    return _interval_text(value) if isinstance(value, pa.MonthDayNano) else value
+
+
+def _text(scalar) -> str | None:
+    value = _plain(scalar)
+    return value if value is None or isinstance(value, str) else json.dumps(value, default=str)
+
+
+def storable(table) -> tuple[Any, list[str]]:
+    """``table`` as a Parquet file and pandas can both hold it, and a note for the agent on
+    each column that had to change.
+
+    Two kinds of column cannot be saved as they come: an INTERVAL (on DuckDB, one timestamp
+    minus another), which Parquet has no type for, and a struct whose fields share a name
+    (DuckDB's ``(a, b)``), which pandas cannot read back. Either used to fail the whole
+    call with no word on why. They are saved, and previewed, as text."""
+    notes = []
+    for index, field in enumerate(table.schema):
+        if _repeats_a_field_name(field.type):
+            why = ("its fields share a name. Name them in SQL, as in {'a': x, 'b': y}, to keep "
+                   "them apart")
+        elif not _parquet_holds(field.type):
+            why = ("Parquet has no such type. For a number, take the difference in SQL in the "
+                   "unit you need")
+        else:
+            continue
+        text = pa.array([_text(scalar) for chunk in table.column(index).chunks
+                         for scalar in chunk], type=pa.large_string())
+        table = table.set_column(index, field.name, text)
+        kind = str(field.type)
+        notes.append(f"note: {field.name} ({kind if len(kind) <= 60 else kind[:59] + '…'}) is "
+                     f"saved and shown as text: {why}.")
+    return table, notes
+
+
 class WarehouseTools:
     def __init__(self, warehouse: Warehouse, results_dir: Path, preview_rows: int,
                  max_rows: int) -> None:
@@ -92,7 +179,14 @@ class WarehouseTools:
         with self._lock:
             name = f"sql_{next(self._counter):04d}.parquet"
         self.results_dir.mkdir(parents=True, exist_ok=True)
-        pq.write_table(table, self.results_dir / name)
+        table, notes = storable(table)
+        try:
+            pq.write_table(table, self.results_dir / name)
+        except Exception as exc:
+            raise WarehouseError(
+                f"the query ran, but its result could not be saved ({type(exc).__name__}: "
+                f"{str(exc)[:300]}). Cast its columns to plain types (numbers, text, dates, "
+                f"timestamps) and run it again.") from exc
         shown = min(self.preview_rows, table.num_rows)
         capped = (f" — capped at {self.max_rows:,} rows; aggregate in SQL or narrow the "
                   f"query for the rest" if result.truncated else "")
@@ -102,7 +196,8 @@ class WarehouseTools:
             head += f" · {result.stats['bytes_processed'] / 1e9:.2f} GB processed"
         more = (f"\n(first {shown} of {table.num_rows:,} rows shown)"
                 if table.num_rows > shown else "")
-        return f"{head}\n{render_preview(table, shown)}{more}\nsaved: results/{name}"
+        said = "".join(f"\n{note}" for note in notes)
+        return f"{head}\n{render_preview(table, shown)}{more}{said}\nsaved: results/{name}"
 
 
 def build_server(tools: WarehouseTools) -> MCPServer:
